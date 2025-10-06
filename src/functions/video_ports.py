@@ -2,7 +2,10 @@ import pygame
 import os
 
 
-video_aprovado = {porta["entry"]: False for porta in VIDEO_PORTS}
+global video_aprovado
+
+global VIDEO_PORTS, SCREEN, FONT
+
 def get_video_status():
     drm_path = "/sys/class/drm"
     status_list = []

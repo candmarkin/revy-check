@@ -1,7 +1,9 @@
 import pygame, os, time
 from datetime import datetime
+from functions.gui import draw_text
 
-def ethernet_connected():
+def ethernet_connected(ETH_INTERFACE):
+
     carrier_file = f"/sys/class/net/{ETH_INTERFACE}/carrier"
     if os.path.isfile(carrier_file):
         with open(carrier_file, "r") as f:
@@ -9,7 +11,11 @@ def ethernet_connected():
         return status == "1"
     return False
 
-def ethernet_step():
+def ethernet_step(ETH_INTERFACE):
+
+    global MODE, CLOCK
+    global log_data
+
     waiting_remove = False
     while True:
         for event in pygame.event.get():

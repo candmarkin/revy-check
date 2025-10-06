@@ -1,10 +1,12 @@
 import pygame
 import sys
 from functions.save_log import save_log
+from functions.gui import draw_text
 from datetime import datetime
 
 
 def screen_step():
+    
     colors = [
         (0, 0, 0),       # PRETO
         (255, 255, 255), # BRANCO
@@ -13,7 +15,11 @@ def screen_step():
         (0, 0, 255),     # AZUL
         (255, 255, 0),   # AMARELO
     ]
-    global MODE
+
+
+    global MODE, SCREEN, CLOCK, log_data
+
+
     color_index = 0
 
     running = True

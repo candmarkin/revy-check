@@ -35,6 +35,8 @@ HAS_SPEAKER = config["HAS_SPEAKER"]
 HAS_HEADPHONE_JACK = config["HAS_HEADPHONE_JACK"]
 HAS_MICROPHONE = config["HAS_MICROPHONE"]
 
+video_aprovado = {porta["entry"]: False for porta in VIDEO_PORTS}
+
 
 # Dev / Prod mode
 MODE = "PROD"
@@ -60,15 +62,7 @@ if MODE == "PROD":
 
 
 #  GUI FUNCTIONS  #
-def draw_text(lines, color=(255, 255, 255)):
-    SCREEN.fill((0, 0, 0))
-    y = HEIGHT // 3
-    for text in lines:
-        rendered = FONT.render(text, True, color)
-        rect = rendered.get_rect(center=(WIDTH // 2, y))
-        SCREEN.blit(rendered, rect)
-        y += 50
-    pygame.display.flip()
+
 
 
 # ---------------- DEV HOTKEY ---------------- #
@@ -170,7 +164,7 @@ def main():
                 state = "VIDEO_STEP"
 
 
-
+        
         # ---------------- VIDEO ---------------- #
         elif state == "VIDEO_STEP":
             outputs, all_done = get_video_status()

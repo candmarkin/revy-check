@@ -1,5 +1,6 @@
 import pygame, sys, time
 from functions.save_log import save_log
+from functions.gui import draw_text
 from datetime import datetime
 
 KEY_LAYOUT = [
@@ -55,9 +56,14 @@ for row in KEY_LAYOUT:
     for key in row:
         all_keys.append(key[1])
 
-kb_button_rect = pygame.Rect(20, HEIGHT - 60, 200, 50)
+
 
 def draw_keyboard():
+
+    global HEIGHT, WIDTH, SCREEN, WHITE, BLACK, GREEN, FONT, DEV_HOTKEY, CLOCK, log_data
+
+    kb_button_rect = pygame.Rect(20, HEIGHT - 60, 200, 50)
+
     SCREEN.fill(WHITE)
     y=80
     for row in KEY_LAYOUT:
@@ -191,6 +197,9 @@ def draw_keyboard():
 
 
 def draw_kb_unlock_button():
+
+    kb_button_rect = pygame.Rect(20, HEIGHT - 60, 200, 50)
+
     unlocked = set(all_keys).issubset(set(already_pressed))
     color = (50, 255, 50) if unlocked else (200, 200, 200)
     bordercolor = (0, 0, 0) if unlocked else (100, 100, 100)
