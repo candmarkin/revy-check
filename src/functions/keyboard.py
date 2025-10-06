@@ -1,23 +1,9 @@
-import pygame
-import sys
+import pygame, sys, time
+from main import SCREEN, HEIGHT, FONT, WHITE, BLACK, GREEN, DEV_HOTKEY, CLOCK, MODE, log_data
+from main import draw_text
+from functions.save_log import save_log
+from datetime import datetime
 
-pygame.init()
-
-# Config janela
-WIDTH, HEIGHT = 1920, 1080
-flags = pygame.FULLSCREEN
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), flags, display=0)
-pygame.display.set_caption("Teste de Teclado ABNT2")
-FONT = pygame.font.SysFont("Arial", 22)
-
-# Cores
-WHITE = (240, 240, 240)
-BLACK = (0, 0, 0)
-GRAY = (180, 180, 180)
-GREEN = (0, 200, 0)
-
-# Define layout ABNT2
-# Formato: (label, keycode, largura)
 KEY_LAYOUT = [
     # Linha de funções
     [("Esc", pygame.K_ESCAPE, 58.5, 40), ("F1", pygame.K_F1, 58.5, 40), ("F2", pygame.K_F2, 58.5, 40), ("F3", pygame.K_F3, 58.5, 40),
@@ -57,17 +43,25 @@ KEY_LAYOUT = [
     [("←", pygame.K_LEFT, 60), 
     ("↑", pygame.K_UP, 80),
     ("↓", pygame.K_DOWN, 80), 
-    ("→", pygame.K_RIGHT, 60)]
+    ("→", pygame.K_RIGHT, 60),
+    ("Pg Up", pygame.K_PAGEUP, 60),
+    ("Pg Down", pygame.K_PAGEDOWN, 60),
+    ]
 
-]   
+] 
 
 pressed_keys = set()
-already_pressed = set()
+already_pressed = []
+all_keys = []
+for row in KEY_LAYOUT:
+    for key in row:
+        all_keys.append(key[1])
 
+kb_button_rect = pygame.Rect(20, HEIGHT - 60, 200, 50)
 
 def draw_keyboard():
     SCREEN.fill(WHITE)
-    y=20
+    y=80
     for row in KEY_LAYOUT:
         x = 20
 
@@ -75,8 +69,22 @@ def draw_keyboard():
             x += 735
             y-= 70
 
+            # PAGEUP
+            rect = pygame.Rect(x, y, row[4][2], 28)
+            if row[4][1] in pressed_keys:
+                color = GREEN
+            elif row[4][1] in already_pressed:
+                color = (100, 255, 100)
+            else:
+                color = WHITE
+            pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+            pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+            text = pygame.font.SysFont("Arial", 15).render(str(row[4][0]), True, BLACK)
+            text_rect = text.get_rect(center=rect.center)
+            SCREEN.blit(text, text_rect)
+
             # SETA ESQUERDA
-            rect = pygame.Rect(x, y , row[0][2], h)
+            rect = pygame.Rect(x, y + 32 , row[0][2], 28)
             if row[0][1] in pressed_keys:
                 color = GREEN
             elif row[0][1] in already_pressed:
@@ -85,7 +93,7 @@ def draw_keyboard():
                 color = WHITE
             pygame.draw.rect(SCREEN, color, rect, border_radius=5)
             pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = FONT.render(str(row[0][0]), True, BLACK)
+            text = pygame.font.SysFont("Arial", 15).render(str(row[0][0]), True, BLACK)
             text_rect = text.get_rect(center=rect.center)
             SCREEN.blit(text, text_rect)
 
@@ -101,7 +109,7 @@ def draw_keyboard():
                 color = WHITE
             pygame.draw.rect(SCREEN, color, rect, border_radius=5)
             pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = FONT.render(str(row[1][0]), True, BLACK)
+            text = pygame.font.SysFont("Arial", 15).render(str(row[1][0]), True, BLACK)
             text_rect = text.get_rect(center=rect.center)
             SCREEN.blit(text, text_rect)
 
@@ -115,14 +123,14 @@ def draw_keyboard():
                 color = WHITE
             pygame.draw.rect(SCREEN, color, rect, border_radius=5)
             pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = FONT.render(str(row[2][0]), True, BLACK)
+            text = pygame.font.SysFont("Arial", 15).render(str(row[2][0]), True, BLACK)
             text_rect = text.get_rect(center=rect.center)
             SCREEN.blit(text, text_rect)
 
             x += 85
 
              # SETA DIREITA
-            rect = pygame.Rect(x, y, row[3][2], h)
+            rect = pygame.Rect(x, y + 32, row[3][2], 28)
             if row[3][1] in pressed_keys:
                 color = GREEN
             elif row[3][1] in already_pressed:
@@ -131,16 +139,27 @@ def draw_keyboard():
                 color = WHITE
             pygame.draw.rect(SCREEN, color, rect, border_radius=5)
             pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = FONT.render(str(row[3][0]), True, BLACK)
+            text = pygame.font.SysFont("Arial", 15).render(str(row[3][0]), True, BLACK)
+            text_rect = text.get_rect(center=rect.center)
+            SCREEN.blit(text, text_rect)
+
+            # PAGEDOWN
+            rect = pygame.Rect(x, y, row[5][2], 28)
+            if row[5][1] in pressed_keys:
+                color = GREEN
+            elif row[5][1] in already_pressed:
+                color = (100, 255, 100)
+            else:
+                color = WHITE
+            pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+            pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+            text = pygame.font.SysFont("Arial", 15).render(str(row[5][0]), True, BLACK)
             text_rect = text.get_rect(center=rect.center)
             SCREEN.blit(text, text_rect)
 
 
             continue
 
-
-        if KEY_LAYOUT.index(row) == 0:
-            y += 10
 
         for key_def in row:
 
@@ -171,65 +190,50 @@ def draw_keyboard():
             continue
         y += 70
 
-    pygame.display.flip()
 
 
-
-all_keys = {key for row in KEY_LAYOUT for *_, key, w in row}
-print(all_keys)
-
-
-button_rect = pygame.Rect(20, HEIGHT - 60, (WIDTH / 2) - 100, 40)
-
-def draw_unlock_button():
-    
-    unlocked = all_keys.issubset(already_pressed)
-
-    # Cor do botão
-    color = (50,255,50) if unlocked else (200,200,200)
-    bordercolor = (0,0,0) if unlocked else (100,100,100)
-
-    pygame.draw.rect(SCREEN, color, button_rect, border_radius=5)
-    pygame.draw.rect(SCREEN, bordercolor, button_rect, 2, border_radius=5)
-    text = FONT.render("Enviar", True, bordercolor)
-    text_rect = text.get_rect(center=button_rect.center)
-    SCREEN.blit(text, text_rect)
-
-    pygame.display.flip()
-
+def draw_kb_unlock_button():
+    unlocked = set(all_keys).issubset(set(already_pressed))
+    color = (50, 255, 50) if unlocked else (200, 200, 200)
+    bordercolor = (0, 0, 0) if unlocked else (100, 100, 100)
+    pygame.draw.rect(SCREEN, color, kb_button_rect, border_radius=5)
+    pygame.draw.rect(SCREEN, bordercolor, kb_button_rect, 2, border_radius=5)
+    text = FONT.render("Aprovar", True, bordercolor)
+    SCREEN.blit(text, text.get_rect(center=kb_button_rect.center))
     return unlocked
 
-def main():
-    global pressed_keys
-    clock = pygame.time.Clock()
+def keyboard_step():
+    global MODE
     running = True
-
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.KEYDOWN:
-                print(event.key)
+                if MODE=="DEV":
+                    save_log()
+                    pygame.quit()
+                    sys.exit()
+                
+            elif event.type == pygame.KEYDOWN:
                 pressed_keys.add(event.key)
-            if event.type == pygame.KEYUP:
+                already_pressed.append(event.key)
+                print(event.key)
+                # Verifica se todas as teclas do hotkey estão pressionadas
+                if DEV_HOTKEY.issubset(pressed_keys) and MODE=="PROD":
+                    print("DEV MODE UNLOCKED via hotkey!")
+                    MODE = "DEV"
+            elif event.type == pygame.KEYUP:
                 if event.key in pressed_keys:
                     pressed_keys.remove(event.key)
-                    already_pressed.add(event.key)
 
+        SCREEN.fill((240, 240, 240))
         draw_keyboard()
-        # unlocked = draw_unlock_button()
+        unlocked = draw_kb_unlock_button()
+        pygame.display.flip()
+        CLOCK.tick(60)
 
-        # if unlocked:
-        #     mouse_pos = pygame.mouse.get_pos()
-        #     print(mouse_pos)
-
-        clock.tick(60)
-
-    pygame.quit()
-    sys.exit()
-
-if __name__ == "__main__":
-    main()
-
-
+        if unlocked:
+            draw_text(["✅ Teste de teclado concluído!"], (0, 255, 0))
+            log_data.append({"step":"KEYBOARD_TEST","time":str(datetime.now())})
+            time.sleep(1)
+            running = False
 

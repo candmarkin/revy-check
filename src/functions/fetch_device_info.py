@@ -1,7 +1,4 @@
-import mysql.connector
-import subprocess
-
-
+import mysql.connector, subprocess
 
 def fetch_device_info():
     conn = mysql.connector.connect(
@@ -55,19 +52,3 @@ def fetch_device_info():
         "HAS_HEADPHONE_JACK": device.get("has_headphone_jack", False),
         "HAS_MICROPHONE": device.get("has_microphone", False)
     }
-
-
-config = fetch_device_info()
-
-PORT_MAP = config["PORT_MAP"]
-VIDEO_PORTS = config["VIDEO_PORTS"]
-HAS_EMBEDDED_SCREEN = config["HAS_EMBEDDED_SCREEN"]
-HAS_EMBEDDED_KEYBOARD = config["HAS_EMBEDDED_KEYBOARD"]
-HAS_ETHERNET_PORT = config["HAS_ETHERNET_PORT"]
-ETH_INTERFACE = config["ETH_INTERFACE"]
-HAS_SPEAKER = config["HAS_SPEAKER"]
-HAS_HEADPHONE_JACK = config["HAS_HEADPHONE_JACK"]
-HAS_MICROPHONE = config["HAS_MICROPHONE"]
-
-
-print(VIDEO_PORTS)
