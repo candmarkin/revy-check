@@ -1,4 +1,3 @@
-from main import CLOCK, MODE, log_data, ETH_INTERFACE, draw_text
 import pygame, os, time
 from datetime import datetime
 

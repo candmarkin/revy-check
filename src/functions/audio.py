@@ -1,8 +1,7 @@
 
-import pulsectl
+# import pulsectl
 import sounddevice as sd
 import numpy as np
-from main import draw_text
 import pygame.sndarray
 import time
 from datetime import datetime
@@ -77,10 +76,10 @@ def test_microphone_bip():
 
 
 
-pulse = pulsectl.Pulse('headphone-monitor')
+# pulse = pulsectl.Pulse('headphone-monitor')
 def headphone_connected():
-    for sink in pulse.sink_list():
-        port_name = sink.port_active.name.lower()
-        if 'headphone' in port_name or 'analog-output-headphones' in port_name:
-            return True
+    # for sink in pulse.sink_list():
+    #     port_name = sink.port_active.name.lower()
+    #     if 'headphone' in port_name or 'analog-output-headphones' in port_name:
+    #         return True
     return False

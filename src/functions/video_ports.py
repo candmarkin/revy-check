@@ -1,4 +1,3 @@
-from main import SCREEN, FONT, VIDEO_PORTS
 import pygame
 import os
 

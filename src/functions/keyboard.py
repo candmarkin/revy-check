@@ -1,6 +1,4 @@
 import pygame, sys, time
-from main import SCREEN, HEIGHT, FONT, WHITE, BLACK, GREEN, DEV_HOTKEY, CLOCK, MODE, log_data
-from main import draw_text
 from functions.save_log import save_log
 from datetime import datetime
 

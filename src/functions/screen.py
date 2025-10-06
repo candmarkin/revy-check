@@ -1,7 +1,6 @@
 import pygame
 import sys
 from functions.save_log import save_log
-from main import SCREEN, CLOCK, MODE, log_data, draw_text
 from datetime import datetime
 
 
