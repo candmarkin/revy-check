@@ -4,4 +4,4 @@ xset -dpms
 xset s off
 xset s noblank
 
-exec python3 /home/vistoria/Downloads/alltests.py
+/usr/bin/xinit /usr/bin/python3 /home/revy/revy-check/main.py -- :0 -nolisten tcp vt1

@@ -1,0 +1,8 @@
+# Dependencies for revy-check
+# Tested with Python 3.10+ and pygame 2.x
+pygame>=2.1.4,<3.0.0
+numpy>=1.21.0,<2.0.0
+pulsectl>=21.8.0,<22.0.0
+sounddevice>=0.4.6,<1.0.0
+numpy>=1.21.0,<2.0.0
+mysql-connector-python>=8.0.0,<9.0.0
