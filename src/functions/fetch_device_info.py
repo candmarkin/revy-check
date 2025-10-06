@@ -1,4 +1,9 @@
-import mysql.connector, subprocess
+import mysql.connector, subprocess, os
+
+db_host = os.getenv("DB_HOST")
+db_user = os.getenv("DB_USER")
+db_password = os.getenv("DB_PASSWORD")
+db_database = os.getenv("DB_DATABASE")
 
 def fetch_device_info():
     conn = mysql.connector.connect(

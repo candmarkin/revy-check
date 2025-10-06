@@ -52,7 +52,6 @@ FONT = pygame.font.SysFont("Arial", 20)
 CLOCK = pygame.time.Clock()
 pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
 
-
 if MODE == "PROD":
     pygame.event.set_grab(True)
     pygame.mouse.set_visible(False)
@@ -74,14 +73,6 @@ def draw_text(lines, color=(255, 255, 255)):
 
 # ---------------- DEV HOTKEY ---------------- #
 DEV_HOTKEY = {pygame.K_LCTRL, pygame.K_LSHIFT, pygame.K_d, pygame.K_v} # conjunto de teclas
-
-
-
-# ---------------- ETHERNET ---------------- #
-
-
-# ---------------- GUI ---------------- #
-
 
 # ---------------- DEV BUTTON ---------------- #
 def prompt_password():
@@ -233,7 +224,7 @@ def main():
                 ethernet_step()
             state = "DONE"
 
-            
+
 
         # ---------------- DONE ---------------- #
         elif state == "DONE":
