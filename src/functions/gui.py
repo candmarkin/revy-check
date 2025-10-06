@@ -1,8 +1,9 @@
 import pygame
 
+
 def draw_text(lines, color=(255, 255, 255)):
 
-    global SCREEN, HEIGHT, WIDTH, FONT
+    from ..main import SCREEN, WIDTH, HEIGHT, FONT
 
     SCREEN.fill((0, 0, 0))
     y = HEIGHT // 3

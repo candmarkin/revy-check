@@ -1,6 +1,7 @@
 import pygame, os, time
 from datetime import datetime
 from functions.gui import draw_text
+from ..main import log_data, CLOCK, MODE
 
 def ethernet_connected(ETH_INTERFACE):
 
@@ -12,9 +13,6 @@ def ethernet_connected(ETH_INTERFACE):
     return False
 
 def ethernet_step(ETH_INTERFACE):
-
-    global MODE, CLOCK
-    global log_data
 
     waiting_remove = False
     while True:

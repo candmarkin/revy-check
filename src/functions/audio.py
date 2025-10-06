@@ -6,6 +6,7 @@ import pygame.sndarray
 import time
 from datetime import datetime
 from functions.gui import draw_text
+from ..main import log_data
 
 # CONFIGS
 SAMPLE_RATE = 44100
@@ -38,8 +39,6 @@ def play_headphone_sequence():
         time.sleep(DURATION + 0.5)
 
 def play_speaker_sequence():
-    global log_data
-
     
     draw_text(["🔊 Teste de alto-falantes - sem headphone"])
     time.sleep(1)
@@ -58,8 +57,6 @@ def play_speaker_sequence():
     time.sleep(1)
 
 def test_microphone_bip():
-    global log_data
-
 
     threshold = 0.01
     duration_record = 1.0

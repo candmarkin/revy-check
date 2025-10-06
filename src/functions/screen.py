@@ -6,6 +6,8 @@ from datetime import datetime
 
 
 def screen_step():
+
+    from ..main import SCREEN, CLOCK, MODE, log_data
     
     colors = [
         (0, 0, 0),       # PRETO
@@ -15,9 +17,6 @@ def screen_step():
         (0, 0, 255),     # AZUL
         (255, 255, 0),   # AMARELO
     ]
-
-
-    global MODE, SCREEN, CLOCK, log_data
 
 
     color_index = 0
