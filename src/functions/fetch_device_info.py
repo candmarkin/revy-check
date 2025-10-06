@@ -7,10 +7,10 @@ db_database = os.getenv("DB_DATABASE")
 
 def fetch_device_info():
     conn = mysql.connector.connect(
-        host="revy.selbetti.com.br",
-        user="drack",
-        password="jdVg2dF2@",
-        database="revycheck"
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database=db_database
     )
 
     try:
