@@ -1037,6 +1037,18 @@ def main():
         CLOCK.tick(10)
 
 def save_log():
+    # salva log no mysql
+    
     with open("checklist_log.json","w") as f:
         json.dump(log_data,f,indent=2)
 
+
+if __name__ == "__main__":
+    disable_alt_tab()
+    try:
+        main()
+    finally:
+        restore_alt_tab()
+        save_log()
+        pygame.quit()
+        sys.exit()
