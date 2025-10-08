@@ -936,13 +936,12 @@ def prompt_password():
 # ---------------- MAIN ---------------- #
 
 def start_step():
-    """Exibe tela de boas-vindas e botão 'Iniciar testes'. Avança ao clicar no botão."""
     button_rect = pygame.Rect(WIDTH//2 - 150, HEIGHT//2 + 40, 300, 70)
     waiting = True
     while waiting:
         SCREEN.fill((30, 30, 30))
         # Mensagem de boas-vindas
-        title = FONT.render("Bem-vindo ao revy check", True, (255, 255, 255))
+        title = FONT.render("Bem-vindo ao RevyCheck", True, (255, 255, 255))
         SCREEN.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//2 - 60))
         # Botão
         pygame.draw.rect(SCREEN, (0, 180, 0), button_rect, border_radius=12)
