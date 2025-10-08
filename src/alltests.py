@@ -392,14 +392,10 @@ info = pygame.display.Info()
 WIDTH, HEIGHT = info.current_w, info.current_h
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption("Checklist Técnico Completo")
+pygame.mouse.set_visible(True)
 FONT = pygame.font.SysFont("Arial", 20)
 CLOCK = pygame.time.Clock()
 pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
-
-
-if MODE == "PROD":
-    pygame.event.set_grab(True)
-    pygame.mouse.set_visible(False)
 
 
 # ---------------- DEV HOTKEY ---------------- #
@@ -768,6 +764,10 @@ def screen_step():
     test_done = False
     approved = None
 
+
+    legend_font = pygame.font.SysFont("Arial", 18)
+    legend_text = "Pressione ENTER para alternar cores e ESPAÇO para finalizar o teste"
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -797,6 +797,11 @@ def screen_step():
 
         if not test_done:
             SCREEN.fill(colors[color_index])
+            # Draw legend in top right corner
+            legend_surface = legend_font.render(legend_text, True, (255, 255, 255))
+            legend_rect = legend_surface.get_rect()
+            legend_rect.topright = (WIDTH - 30, 20)
+            SCREEN.blit(legend_surface, legend_rect)
             pygame.display.flip()
 
         CLOCK.tick(60)
