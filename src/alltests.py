@@ -354,6 +354,7 @@ def fetch_device_info():
     }
 
 
+
 config = fetch_device_info()
 
 PORT_MAP = config["PORT_MAP"]
@@ -385,8 +386,11 @@ log_data = []
 
 # ---------------- INIT PYGAME ---------------- #
 pygame.init()
-WIDTH, HEIGHT = 1920, 1080
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), display=0)
+
+# Detecta resolução da tela e usa fullscreen
+info = pygame.display.Info()
+WIDTH, HEIGHT = info.current_w, info.current_h
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption("Checklist Técnico Completo")
 FONT = pygame.font.SysFont("Arial", 20)
 CLOCK = pygame.time.Clock()
@@ -562,13 +566,22 @@ kb_button_rect = pygame.Rect(20, HEIGHT - 60, 200, 50)
 
 def draw_keyboard():
     SCREEN.fill(WHITE)
-    y=80
-    for row in KEY_LAYOUT:
-        x = 20
+    y = 80
+    for row_idx, row in enumerate(KEY_LAYOUT):
+        # Calcular largura total da linha para centralizar
+        total_width = 0
+        for key_def in row:
+            if len(key_def) == 4:
+                _, _, w, _ = key_def
+            else:
+                _, _, w = key_def
+            total_width += w + 5
+        total_width -= 5  # remover último espaçamento extra
+        x = (WIDTH - total_width) // 2
 
-        if KEY_LAYOUT.index(row) == len(KEY_LAYOUT) - 1: # LAYOUT DAS SETAS
-            x += 735
-            y-= 70
+        if row_idx == len(KEY_LAYOUT) - 1: # LAYOUT DAS SETAS
+            x += 735 - ((WIDTH - total_width) // 2)  # manter alinhamento relativo
+            y -= 70
 
             # PAGEUP
             rect = pygame.Rect(x, y, row[4][2], 28)
@@ -916,10 +929,38 @@ def prompt_password():
     return input_text
 
 # ---------------- MAIN ---------------- #
+
+def start_step():
+    """Exibe tela de boas-vindas e botão 'Iniciar testes'. Avança ao clicar no botão."""
+    button_rect = pygame.Rect(WIDTH//2 - 150, HEIGHT//2 + 40, 300, 70)
+    waiting = True
+    while waiting:
+        SCREEN.fill((30, 30, 30))
+        # Mensagem de boas-vindas
+        title = FONT.render("Bem-vindo ao revy check", True, (255, 255, 255))
+        SCREEN.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//2 - 60))
+        # Botão
+        pygame.draw.rect(SCREEN, (0, 180, 0), button_rect, border_radius=12)
+        btn_text = FONT.render("Iniciar testes", True, (255,255,255))
+        SCREEN.blit(btn_text, (button_rect.centerx - btn_text.get_width()//2, button_rect.centery - btn_text.get_height()//2))
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if button_rect.collidepoint(event.pos):
+                    waiting = False
+        CLOCK.tick(30)
+
 def main():
     global MODE  # Declare no início
     clock = pygame.time.Clock()
-    state = "SCREEN_STEP"
+    state = "START_STEP"
     step = 0
     waiting_remove = False
 
@@ -955,6 +996,11 @@ def main():
                 if event.key in pressed_keys:
                     pressed_keys.remove(event.key)
 
+        # ---------------- START ---------------- #
+        if state == "START_STEP":
+            start_step()
+            state = "SCREEN_STEP"
+            continue
 
         # ---------------- TELA ---------------- #
         if state == "SCREEN_STEP":
@@ -1038,7 +1084,7 @@ def main():
 
 def save_log():
     # salva log no mysql
-    
+
     with open("checklist_log.json","w") as f:
         json.dump(log_data,f,indent=2)
 
