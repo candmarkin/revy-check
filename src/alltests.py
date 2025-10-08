@@ -563,7 +563,9 @@ kb_button_rect = pygame.Rect(20, HEIGHT - 60, 200, 50)
 def draw_keyboard():
     SCREEN.fill(WHITE)
     y = 80
-    for row_idx, row in enumerate(KEY_LAYOUT):
+
+    # Desenha todas as linhas exceto a última (setas)
+    for row_idx, row in enumerate(KEY_LAYOUT[:-1]):
         # Calcular largura total da linha para centralizar
         total_width = 0
         for key_def in row:
@@ -575,100 +577,122 @@ def draw_keyboard():
         total_width -= 5  # remover último espaçamento extra
         x = (WIDTH - total_width) // 2
 
-        if row_idx == len(KEY_LAYOUT) - 1: # LAYOUT DAS SETAS
-            x += 735 - ((WIDTH - total_width) // 2)  # manter alinhamento relativo
-            y -= 70
+        for key_def in row:
+            if len(key_def) == 4:
+                label, key, w, h = key_def
+            else:
+                label, key, w = key_def
+                h = 60
 
-            # PAGEUP
-            rect = pygame.Rect(x, y, row[4][2], 28)
-            if row[4][1] in pressed_keys:
+            rect = pygame.Rect(x, y , w, h)
+
+            if key in pressed_keys:
                 color = GREEN
-            elif row[4][1] in already_pressed:
+            elif key in already_pressed:
                 color = (100, 255, 100)
             else:
                 color = WHITE
             pygame.draw.rect(SCREEN, color, rect, border_radius=5)
             pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = pygame.font.SysFont("Arial", 15).render(str(row[4][0]), True, BLACK)
+            text = FONT.render(label, True, BLACK)
             text_rect = text.get_rect(center=rect.center)
             SCREEN.blit(text, text_rect)
+            x += w + 5
 
-            # SETA ESQUERDA
-            rect = pygame.Rect(x, y + 32 , row[0][2], 28)
-            if row[0][1] in pressed_keys:
-                color = GREEN
-            elif row[0][1] in already_pressed:
-                color = (100, 255, 100)
-            else:
-                color = WHITE
-            pygame.draw.rect(SCREEN, color, rect, border_radius=5)
-            pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = pygame.font.SysFont("Arial", 15).render(str(row[0][0]), True, BLACK)
-            text_rect = text.get_rect(center=rect.center)
-            SCREEN.blit(text, text_rect)
+        if KEY_LAYOUT.index(row) == 0:
+            y += 50
+        else:
+            y += 70
 
-            x+= 65
+    # Desenha o bloco das setas no canto inferior direito
+    arrow_row = KEY_LAYOUT[-1]
+    # Definir posição base (margem da direita e de baixo)
+    base_x = WIDTH - 320
+    base_y = HEIGHT - 170
 
-            # SETA CIMA
-            rect = pygame.Rect(x, y , row[1][2], 28)
-            if row[1][1] in pressed_keys:
-                color = GREEN
-            elif row[1][1] in already_pressed:
-                color = (100, 255, 100)
-            else:
-                color = WHITE
-            pygame.draw.rect(SCREEN, color, rect, border_radius=5)
-            pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = pygame.font.SysFont("Arial", 15).render(str(row[1][0]), True, BLACK)
-            text_rect = text.get_rect(center=rect.center)
-            SCREEN.blit(text, text_rect)
+    # PAGEUP
+    rect = pygame.Rect(base_x, base_y, arrow_row[4][2], 28)
+    if arrow_row[4][1] in pressed_keys:
+        color = GREEN
+    elif arrow_row[4][1] in already_pressed:
+        color = (100, 255, 100)
+    else:
+        color = WHITE
+    pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+    pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+    text = pygame.font.SysFont("Arial", 15).render(str(arrow_row[4][0]), True, BLACK)
+    text_rect = text.get_rect(center=rect.center)
+    SCREEN.blit(text, text_rect)
 
-            # SETA BAIXO
-            rect = pygame.Rect(x, y + 32 , row[2][2], 28)
-            if row[2][1] in pressed_keys:
-                color = GREEN
-            elif row[2][1] in already_pressed:
-                color = (100, 255, 100)
-            else:
-                color = WHITE
-            pygame.draw.rect(SCREEN, color, rect, border_radius=5)
-            pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = pygame.font.SysFont("Arial", 15).render(str(row[2][0]), True, BLACK)
-            text_rect = text.get_rect(center=rect.center)
-            SCREEN.blit(text, text_rect)
+    # SETA ESQUERDA
+    rect = pygame.Rect(base_x, base_y + 32 , arrow_row[0][2], 28)
+    if arrow_row[0][1] in pressed_keys:
+        color = GREEN
+    elif arrow_row[0][1] in already_pressed:
+        color = (100, 255, 100)
+    else:
+        color = WHITE
+    pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+    pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+    text = pygame.font.SysFont("Arial", 15).render(str(arrow_row[0][0]), True, BLACK)
+    text_rect = text.get_rect(center=rect.center)
+    SCREEN.blit(text, text_rect)
 
-            x += 85
+    # SETA CIMA
+    rect = pygame.Rect(base_x + 65, base_y , arrow_row[1][2], 28)
+    if arrow_row[1][1] in pressed_keys:
+        color = GREEN
+    elif arrow_row[1][1] in already_pressed:
+        color = (100, 255, 100)
+    else:
+        color = WHITE
+    pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+    pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+    text = pygame.font.SysFont("Arial", 15).render(str(arrow_row[1][0]), True, BLACK)
+    text_rect = text.get_rect(center=rect.center)
+    SCREEN.blit(text, text_rect)
 
-             # SETA DIREITA
-            rect = pygame.Rect(x, y + 32, row[3][2], 28)
-            if row[3][1] in pressed_keys:
-                color = GREEN
-            elif row[3][1] in already_pressed:
-                color = (100, 255, 100)
-            else:
-                color = WHITE
-            pygame.draw.rect(SCREEN, color, rect, border_radius=5)
-            pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = pygame.font.SysFont("Arial", 15).render(str(row[3][0]), True, BLACK)
-            text_rect = text.get_rect(center=rect.center)
-            SCREEN.blit(text, text_rect)
+    # SETA BAIXO
+    rect = pygame.Rect(base_x + 65, base_y + 32 , arrow_row[2][2], 28)
+    if arrow_row[2][1] in pressed_keys:
+        color = GREEN
+    elif arrow_row[2][1] in already_pressed:
+        color = (100, 255, 100)
+    else:
+        color = WHITE
+    pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+    pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+    text = pygame.font.SysFont("Arial", 15).render(str(arrow_row[2][0]), True, BLACK)
+    text_rect = text.get_rect(center=rect.center)
+    SCREEN.blit(text, text_rect)
 
-            # PAGEDOWN
-            rect = pygame.Rect(x, y, row[5][2], 28)
-            if row[5][1] in pressed_keys:
-                color = GREEN
-            elif row[5][1] in already_pressed:
-                color = (100, 255, 100)
-            else:
-                color = WHITE
-            pygame.draw.rect(SCREEN, color, rect, border_radius=5)
-            pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
-            text = pygame.font.SysFont("Arial", 15).render(str(row[5][0]), True, BLACK)
-            text_rect = text.get_rect(center=rect.center)
-            SCREEN.blit(text, text_rect)
+    # SETA DIREITA
+    rect = pygame.Rect(base_x + 150, base_y + 32, arrow_row[3][2], 28)
+    if arrow_row[3][1] in pressed_keys:
+        color = GREEN
+    elif arrow_row[3][1] in already_pressed:
+        color = (100, 255, 100)
+    else:
+        color = WHITE
+    pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+    pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+    text = pygame.font.SysFont("Arial", 15).render(str(arrow_row[3][0]), True, BLACK)
+    text_rect = text.get_rect(center=rect.center)
+    SCREEN.blit(text, text_rect)
 
-
-            continue
+    # PAGEDOWN
+    rect = pygame.Rect(base_x + 150, base_y, arrow_row[5][2], 28)
+    if arrow_row[5][1] in pressed_keys:
+        color = GREEN
+    elif arrow_row[5][1] in already_pressed:
+        color = (100, 255, 100)
+    else:
+        color = WHITE
+    pygame.draw.rect(SCREEN, color, rect, border_radius=5)
+    pygame.draw.rect(SCREEN, BLACK, rect, 2, border_radius=5)
+    text = pygame.font.SysFont("Arial", 15).render(str(arrow_row[5][0]), True, BLACK)
+    text_rect = text.get_rect(center=rect.center)
+    SCREEN.blit(text, text_rect)
 
 
         for key_def in row:
@@ -715,6 +739,14 @@ def draw_kb_unlock_button():
 def keyboard_step():
     global MODE
     running = True
+    test_done = False
+    approved = None
+
+    # Botões Aprovar/Reprovar
+    approve_rect = pygame.Rect(250, HEIGHT - 60, 180, 50)
+    reject_rect = pygame.Rect(450, HEIGHT - 60, 180, 50)
+    button_font = pygame.font.SysFont("Arial", 22)
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -722,7 +754,6 @@ def keyboard_step():
                     save_log()
                     pygame.quit()
                     sys.exit()
-                
             elif event.type == pygame.KEYDOWN:
                 pressed_keys.add(event.key)
                 already_pressed.append(event.key)
@@ -731,19 +762,49 @@ def keyboard_step():
                 if DEV_HOTKEY.issubset(pressed_keys) and MODE=="PROD":
                     print("DEV MODE UNLOCKED via hotkey!")
                     MODE = "DEV"
+                if test_done:
+                    if event.key == pygame.K_y:
+                        approved = True
+                        running = False
+                    elif event.key == pygame.K_n:
+                        approved = False
+                        running = False
             elif event.type == pygame.KEYUP:
                 if event.key in pressed_keys:
                     pressed_keys.remove(event.key)
+            elif event.type == pygame.MOUSEBUTTONDOWN and test_done:
+                if approve_rect.collidepoint(event.pos):
+                    approved = True
+                    running = False
+                elif reject_rect.collidepoint(event.pos):
+                    approved = False
+                    running = False
 
         SCREEN.fill((240, 240, 240))
         draw_keyboard()
         unlocked = draw_kb_unlock_button()
+
+        if unlocked and not test_done:
+            # Exibe mensagem e botões
+            msg = button_font.render("Teste concluído!", True, (0, 180, 0))
+            SCREEN.blit(msg, (250, HEIGHT - 120))
+            # Botão Aprovar
+            pygame.draw.rect(SCREEN, (0, 200, 0), approve_rect, border_radius=8)
+            txt_aprovar = button_font.render("Aprovar (Y)", True, (255,255,255))
+            SCREEN.blit(txt_aprovar, (approve_rect.centerx - txt_aprovar.get_width()//2, approve_rect.centery - txt_aprovar.get_height()//2))
+            # Botão Reprovar
+            pygame.draw.rect(SCREEN, (200, 0, 0), reject_rect, border_radius=8)
+            txt_reprovar = button_font.render("Reprovar (N)", True, (255,255,255))
+            SCREEN.blit(txt_reprovar, (reject_rect.centerx - txt_reprovar.get_width()//2, reject_rect.centery - txt_reprovar.get_height()//2))
+            test_done = True
+
         pygame.display.flip()
         CLOCK.tick(60)
 
-        if unlocked:
-            draw_text(["✅ Teste de teclado concluído!"], (0, 255, 0))
-            log_data.append({"step":"KEYBOARD_TEST","time":str(datetime.now())})
+        if test_done and approved is not None:
+            result = "APROVADO" if approved else "REPROVADO"
+            draw_text([f"{'✅' if approved else '❌'} Teste de teclado {result}!"], (0, 255, 0) if approved else (255, 0, 0))
+            log_data.append({"step":"KEYBOARD_TEST","time":str(datetime.now()), "result": result})
             time.sleep(1)
             running = False
 
