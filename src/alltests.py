@@ -128,14 +128,14 @@ def cadastro_portas():
 
     # ----------------- OBTÉM INFORMAÇÕES BÁSICAS DO SISTEMA -----------------
     try:
-        manufacturer = subprocess.check_output("dmidecode -s system-manufacturer", shell=True).strip().decode("utf-8")
+        manufacturer = subprocess.check_output("cat /sys/class/dmi/id/sys_vendorr", shell=True).strip().decode("utf-8")
     except Exception:
         manufacturer = ""
     try:
         if "LENOVO" in str(manufacturer).upper():
-            productname = subprocess.check_output("dmidecode -s system-version", shell=True).strip().decode("utf-8")
+            productname = subprocess.check_output("cat /sys/class/dmi/id/product_version", shell=True).strip().decode("utf-8")
         else:
-            productname = subprocess.check_output("dmidecode -s system-product-name", shell=True).strip().decode("utf-8")
+            productname = subprocess.check_output("cat /sys/class/dmi/id/product_name", shell=True).strip().decode("utf-8")
     except Exception:
         productname = "UnknownDevice"
 
@@ -577,7 +577,6 @@ def draw_keyboard():
 
         if row_idx == len(KEY_LAYOUT) - 1: # LAYOUT DAS SETAS
             x += 735 - ((WIDTH - total_width) // 2)  # manter alinhamento relativo
-            y -= 70
 
             # PAGEUP
             rect = pygame.Rect(x, y, row[4][2], 28)
