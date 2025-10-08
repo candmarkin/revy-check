@@ -9,6 +9,7 @@ import os
 import json
 from datetime import datetime
 import mysql.connector
+from ..scripts.cadastro_portas2 import *
 
 
 
@@ -30,14 +31,14 @@ def fetch_device_info():
     )
 
     try:
-        manufacturer = subprocess.check_output("dmidecode -s system-manufacturer", shell=True).strip().decode("utf-8")
+        manufacturer = subprocess.check_output("cat /sys/class/dmi/id/sys_vendor", shell=True).strip().decode("utf-8")
     except Exception:
         manufacturer = ""
     try:
         if "LENOVO" in str(manufacturer).upper():
-            productname = subprocess.check_output("dmidecode -s system-version", shell=True).strip().decode("utf-8")
+            productname = subprocess.check_output("cat /sys/class/dmi/id/product_version", shell=True).strip().decode("utf-8")
         else:
-            productname = subprocess.check_output("dmidecode -s system-product-name", shell=True).strip().decode("utf-8")
+            productname = subprocess.check_output("cat /sys/class/dmi/id/product_name", shell=True).strip().decode("utf-8")
     except Exception:
         productname = "UnknownDevice"
 
@@ -45,7 +46,10 @@ def fetch_device_info():
         cursor.execute("select id from devices where name=%s", (productname,))
         device = cursor.fetchone()
         if not device:
-            raise ValueError(f"Device '{productname}' not found in database.")
+            print(f"Device '{productname}' not found in database.")
+            cadastro_portas()
+            fetch_device_info()
+
         device_id = device['id']
         print(f"Device ID for '{productname}': {device_id}")
 
