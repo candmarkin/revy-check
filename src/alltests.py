@@ -970,6 +970,11 @@ def main():
     waiting_remove = False
 
     while True:
+
+        legend_font = pygame.font.SysFont("Arial", 8)        
+        state_title = FONT.render(state, True, (150, 150, 150))
+        SCREEN.blit(state_title, (20, 20))
+
         SCREEN.fill((0,0,0))
 
         for event in pygame.event.get():
