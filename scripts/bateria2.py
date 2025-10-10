@@ -1,127 +1,115 @@
-#!/usr/bin/env python3
-import subprocess, time, re, os, sys
-from datetime import datetime
+import pygame
+import psutil
+import requests
+import threading
+import time
+import os
+import subprocess
+import matplotlib.pyplot as plt
 
-# -------------------------------
-# Funções utilitárias
-# -------------------------------
+# Configurações
+VIDEO_URL = "https://file-examples.com/storage/fe5e7ae17568e94fb953bd4/2017/04/file_example_MP4_1280_10MG.mp4"
+VIDEO_PATH = "video_teste.mp4"
+TEMPO_CPU = 300  # segundos
+TEMPO_VIDEO = 300  # segundos
 
-def run(cmd, capture=True):
+# Inicializa pygame
+pygame.init()
+# seta pra rodar fullscreen na resolucao do monitor principal
+info = pygame.display.Info()
+WIDTH, HEIGHT = info.current_w, info.current_h
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+pygame.display.set_caption("Teste de Bateria Automático")
+font = pygame.font.SysFont("Arial", 24)
+
+clock = pygame.time.Clock()
+
+bateria_log = []
+tempo_log = []
+start_time = time.time()
+
+def baixar_video():
+    if not os.path.exists(VIDEO_PATH):
+        texto("Baixando vídeo de teste...", center=True)
+        pygame.display.flip()
+        r = requests.get(VIDEO_URL, stream=True)
+        with open(VIDEO_PATH, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+
+def texto(msg, y=200, center=False):
+    screen.fill((0, 0, 0))
+    t = font.render(msg, True, (255, 255, 255))
+    if center:
+        rect = t.get_rect(center=(400, 240))
+    else:
+        rect = t.get_rect(topleft=(50, y))
+    screen.blit(t, rect)
+
+def get_bateria():
     try:
-        if capture:
-            return subprocess.check_output(cmd, shell=True, text=True)
-        else:
-            subprocess.run(cmd, shell=True)
-    except subprocess.CalledProcessError as e:
-        return e.output if capture else None
+        return psutil.sensors_battery().percent
+    except:
+        return None
 
-def get_battery_info():
-    output = run("upower -i $(upower -e | grep BAT)")
-    energy_now = re.search(r"energy:\s+([\d\.]+)", output)
-    energy_full = re.search(r"energy-full:\s+([\d\.]+)", output)
-    rate = re.search(r"energy-rate:\s+([\d\.]+)", output)
+def grafico_final():
+    plt.figure(figsize=(8,4))
+    plt.plot(tempo_log, bateria_log, label="Bateria (%)")
+    plt.xlabel("Tempo (s)")
+    plt.ylabel("Nível da Bateria (%)")
+    plt.title("Teste de Consumo de Bateria")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("grafico_bateria.png")
+    plt.show()
 
-    if energy_now and rate and energy_full:
-        return {
-            "energy_now": float(energy_now.group(1)),
-            "energy_full": float(energy_full.group(1)),
-            "rate": float(rate.group(1)),
-        }
-    return None
+def cpu_stress():
+    texto("Estágio 1: CPU a 100%", center=True)
+    pygame.display.flip()
+    end = time.time() + TEMPO_CPU
+    def worker():
+        while time.time() < end:
+            pass
+    threads = []
+    for _ in range(os.cpu_count()):
+        t = threading.Thread(target=worker)
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
 
-def estimate_runtime(info):
-    if info["rate"] == 0:
-        return "∞"
-    hours = info["energy_now"] / info["rate"]
-    return f"{hours:.1f}h (~{hours*60:.0f} min)"
+def video_playback():
+    texto("Estágio 2: Reprodução de vídeo", center=True)
+    pygame.display.flip()
+    subprocess.Popen(["mpv", VIDEO_PATH, "--really-quiet", "--no-terminal"])
+    time.sleep(TEMPO_VIDEO)
+    os.system("pkill mpv")
 
-# -------------------------------
-# Teste de bateria automatizado
-# -------------------------------
+def monitor_bateria():
+    while True:
+        tempo = time.time() - start_time
+        bateria = get_bateria()
+        if bateria is not None:
+            bateria_log.append(bateria)
+            tempo_log.append(round(tempo, 1))
+        time.sleep(2)
+        texto(f"Bateria: {bateria}%")
+        pygame.display.flip()
 
-def measure_phase(name, duration, command):
-    print(f"\n🔋 Iniciando fase: {name} ({duration}s)")
-    time.sleep(2)
+monitor_thread = threading.Thread(target=monitor_bateria, daemon=True)
+monitor_thread.start()
 
-    # Captura consumo antes
-    info_before = get_battery_info()
+# Fluxo principal
+baixar_video()
+cpu_stress()
+video_playback()
 
-    # Inicia powertop em background para medir média
-    report_file = f"{name.lower()}.html"
-    powertop_proc = subprocess.Popen(
-        f"sudo powertop --time={duration} --html={report_file}",
-        shell=True
-    )
+texto("Teste concluído! Gerando gráfico...", center=True)
+pygame.display.flip()
+grafico_final()
 
-    # Roda o comando principal (stress ou vídeo)
-    subprocess.run(command, shell=True)
-
-    # Aguarda powertop terminar
-    powertop_proc.wait()
-
-    # Captura consumo depois
-    info_after = get_battery_info()
-
-    # Cálculo básico
-    used = info_before["energy_now"] - info_after["energy_now"]
-    avg_rate = used / (duration / 3600)
-    print(f"⚙️  Fase {name} concluída: {avg_rate:.2f} W médios")
-
-    return {
-        "fase": name,
-        "consumo_medio": round(avg_rate, 2),
-        "arquivo": report_file,
-        "runtime_est": estimate_runtime(info_after),
-    }
-
-# -------------------------------
-# Execução principal
-# -------------------------------
-
-def main():
-    print("\n=== 🔋 Teste Automático de Bateria ===\n")
-    print("Certifique-se de que o notebook está RODANDO NA BATERIA.\n")
-    time.sleep(3)
-
-    os.makedirs("battery_reports", exist_ok=True)
-    os.chdir("battery_reports")
-
-    phases = []
-
-    # Fase 1 – Stress total
-    phases.append(measure_phase(
-        "Stress",
-        300,
-        f"stress --cpu $(nproc) --io 4 --vm 2 --vm-bytes 512M --timeout 300"
-    ))
-
-    # Fase 2 – Vídeo playback
-    video_path = input("\n🎬 Caminho do vídeo (ex: /home/user/video.mp4): ").strip()
-    if not os.path.exists(video_path):
-        print("❌ Vídeo não encontrado.")
-        sys.exit(1)
-
-    phases.append(measure_phase(
-        "Video",
-        300,
-        f"mpv --quiet --vo=gpu --hwdec=auto --loop=inf --really-quiet {video_path} --length=300"
-    ))
-
-    # Gera relatório final
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    with open("relatorio_final.html", "w") as f:
-        f.write(f"""
-        <html><head><title>Relatório de Teste de Bateria</title></head>
-        <body style='font-family:sans-serif'>
-        <h2>🔋 Relatório de Teste de Bateria ({now})</h2>
-        <table border=1 cellspacing=0 cellpadding=6>
-        <tr><th>Fase</th><th>Consumo Médio (W)</th><th>Autonomia Estimada</th><th>Relatório Powertop</th></tr>
-        {''.join(f"<tr><td>{p['fase']}</td><td>{p['consumo_medio']}</td><td>{p['runtime_est']}</td><td><a href='{p['arquivo']}'>Ver</a></td></tr>" for p in phases)}
-        </table>
-        </body></html>
-        """)
-
-    print("\n✅ Teste completo! Relatório salvo em: battery_reports/relatorio_final.html")
-
-if __name__ == "__main__":
-    main()
+texto("Gráfico salvo como grafico_bateria.png", center=True)
+pygame.display.flip()
+time.sleep(5)
+pygame.quit()
