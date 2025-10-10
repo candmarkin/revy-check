@@ -888,10 +888,14 @@ def ethernet_step():
         else:
             draw_text([f"Remova o cabo Ethernet ({ETH_INTERFACE})..."])
             if not ethernet_connected():
-                draw_text(["✅ Teste Ethernet concluído!"], (0, 255, 0))
-                log_data.append({"step":"ETHERNET_TEST","time":str(datetime.now())})
-                time.sleep(1)
-                break
+                draw_text([f"Conecte o cabo Ethernet ({ETH_INTERFACE})..."])
+                if ethernet_connected():
+                    waiting_remove = True
+                    time.sleep(0.5)
+                    draw_text(["✅ Teste Ethernet concluído!"], (0, 255, 0))
+                    log_data.append({"step":"ETHERNET_TEST","time":str(datetime.now())})
+                    time.sleep(1)
+                    break
         CLOCK.tick(5)
 
 # ---------------- GUI ---------------- #

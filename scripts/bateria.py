@@ -2,12 +2,13 @@ import pygame
 import multiprocessing as mp
 import math
 import time
-import sys
 import io
 
 import psutil
 import numpy as np
 import matplotlib.pyplot as plt
+
+print(psutil.sensors_battery())
 
 
 # ---------- STRESS FUNCTION ----------
