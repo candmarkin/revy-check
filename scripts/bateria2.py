@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 
 
 VIDEO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "video_teste.mp4"))
-TEMPO_CPU = 300  # segundos
-TEMPO_VIDEO = 300  # segundos
+TEMPO_CPU = 10  # segundos
+TEMPO_VIDEO = 10  # segundos
 
 # Inicializa pygame
 pygame.init()
@@ -100,15 +100,36 @@ def grafico_final():
             tempo_estimado_vid = 0
             cpu_media_video = 0
 
-        print("\n==== RESULTADOS DO TESTE ====")
-        print(f"\n--- 100% CPU ---")
-        print(f"Consumo de bateria: {consumo_cpu:.2f}% em {tempo_cpu:.1f}s")
-        print(f"Estimativa de duração: {tempo_estimado_cpu/3600:.2f} horas")
-        print(f"--- Playback de Vídeo ---")
-        print(f"Consumo de bateria: {consumo_vid:.2f}% em {tempo_vid:.1f}s")
-        print(f"Estimativa de duração: {tempo_estimado_vid/3600:.2f} horas")
-        print(f"Consumo médio de CPU no vídeo: {cpu_media_video:.1f}%")
-        # start a tiny Python worker that spins in an infinite loop
+        # Exibe o relatório final em uma tela Pygame
+        relatorio = [
+            "==== RESULTADOS DO TESTE ====",
+            "",
+            "--- 100% CPU ---",
+            f"Consumo de bateria: {consumo_cpu:.2f}% em {tempo_cpu:.1f}s",
+            f"Estimativa de duração: {tempo_estimado_cpu/3600:.2f} horas",
+            "",
+            "--- Playback de Vídeo ---",
+            f"Consumo de bateria: {consumo_vid:.2f}% em {tempo_vid:.1f}s",
+            f"Estimativa de duração: {tempo_estimado_vid/3600:.2f} horas",
+            f"Consumo médio de CPU no vídeo: {cpu_media_video:.1f}%"
+        ]
+        screen.fill((0, 0, 0))
+        y = 60
+        for linha in relatorio:
+            t = font.render(linha, True, (255, 255, 255))
+            rect = t.get_rect(center=(WIDTH//2, y))
+            screen.blit(t, rect)
+            y += 50
+        pygame.display.flip()
+        # Aguarda o usuário pressionar uma tecla para sair
+        esperando = True
+        while esperando:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    esperando = False
+                elif event.type == pygame.KEYDOWN:
+                    esperando = False
+            time.sleep(0.1)
 
 
 
