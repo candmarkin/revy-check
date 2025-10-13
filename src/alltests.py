@@ -1097,10 +1097,55 @@ def main():
         CLOCK.tick(10)
 
 def save_log():
-    # salva log no mysql
-
+    # salva log no mysql e na tabela logs
     with open("checklist_log.json","w") as f:
-        json.dump(log_data,f,indent=2)
+        json.dump(log_data, f, indent=2)
+
+    # Salva no banco logs
+    try:
+        conn = mysql.connector.connect(
+            host="revy.selbetti.com.br",
+            user="drack",
+            password="jdVg2dF2@",
+            database="revycheck"
+        )
+        cursor = conn.cursor()
+        # Tenta obter serial do dispositivo
+        try:
+            device_serial = subprocess.check_output("cat /sys/class/dmi/id/product_serial", shell=True).strip().decode("utf-8")
+        except Exception:
+            device_serial = "unknown"
+        for entry in log_data:
+            step = entry.get("step", "")
+            time_str = entry.get("time", None)
+            # tenta converter para datetime
+            if time_str:
+                try:
+                    time_val = datetime.fromisoformat(time_str)
+                except Exception:
+                    time_val = datetime.now()
+            else:
+                time_val = datetime.now()
+            approved = None
+            # tenta pegar campo approved/result
+            if "approved" in entry:
+                approved = int(bool(entry["approved"]))
+            elif "result" in entry:
+                if str(entry["result"]).upper() == "APROVADO":
+                    approved = 1
+                elif str(entry["result"]).upper() == "REPROVADO":
+                    approved = 0
+            # Insere na tabela logs
+            cursor.execute(
+                "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
+                (device_serial, step, time_val, approved)
+            )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Log salvo na tabela logs do MySQL.")
+    except Exception as e:
+        print(f"Erro ao salvar log no banco: {e}")
 
 
 if __name__ == "__main__":
