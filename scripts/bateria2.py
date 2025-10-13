@@ -57,64 +57,60 @@ def grafico_final():
     # Fase 2: Playback de vídeo (restante)
     if len(tempo_log) < 2:
         plt.legend()
-        plt.savefig("grafico_bateria.png")
-        plt.show()
-        return
-
-    # Encontrar índices de transição entre as fases
-    cpu_fim_idx = 0
-    for i, t in enumerate(tempo_log):
-        if t >= TEMPO_CPU:
-            cpu_fim_idx = i
-            break
-    else:
-        cpu_fim_idx = len(tempo_log)-1
-
-    # Estimar taxa de descarga em cada fase
-    # CPU 100%
-    if cpu_fim_idx > 1:
-        dbat_cpu = bateria_log[0] - bateria_log[cpu_fim_idx]
-        dt_cpu = tempo_log[cpu_fim_idx] - tempo_log[0]
-        rate_cpu = dbat_cpu / dt_cpu if dt_cpu > 0 else 0.0001
-        cpu_avg = rate_cpu
-        
-        # Estimativa de tempo total de bateria para 100% CPU
-        if rate_cpu > 0:
-            tempo_estimado_cpu = (bateria_log[0]) / rate_cpu
+        # Encontrar índices de transição entre as fases
+        cpu_fim_idx = 0
+        for i, t in enumerate(tempo_log):
+            if t >= TEMPO_CPU:
+                cpu_fim_idx = i
+                break
         else:
+            cpu_fim_idx = len(tempo_log)-1
+
+        # CPU 100%
+        if cpu_fim_idx > 1:
+            dbat_cpu = bateria_log[0] - bateria_log[cpu_fim_idx]
+            dt_cpu = tempo_log[cpu_fim_idx] - tempo_log[0]
+            rate_cpu = dbat_cpu / dt_cpu if dt_cpu > 0 else 0.0001
+            consumo_cpu = dbat_cpu
+            tempo_cpu = dt_cpu
+            if rate_cpu > 0:
+                tempo_estimado_cpu = (bateria_log[0]) / rate_cpu
+            else:
+                tempo_estimado_cpu = 0
+        else:
+            consumo_cpu = 0
+            tempo_cpu = 0
             tempo_estimado_cpu = 0
-        # Linha de estimativa
-        tempo_cpu = [0, tempo_estimado_cpu]
-        bateria_cpu = [bateria_log[0], 0]
-        plt.plot(tempo_cpu, bateria_cpu, '--', color='red', label=f"Estimativa CPU 100% ({tempo_estimado_cpu/3600:.1f}h)")
-    else:
-        tempo_estimado_cpu = 0
-        cpu_avg = 0
 
-    # Playback vídeo
-    if len(tempo_log) - cpu_fim_idx > 2:
-        dbat_vid = bateria_log[cpu_fim_idx] - bateria_log[-1]
-        dt_vid = tempo_log[-1] - tempo_log[cpu_fim_idx]
-        rate_vid = dbat_vid / dt_vid if dt_vid > 0 else 0.0001
-        # Estimativa de tempo total de bateria para playback
-        if rate_vid > 0:
-            tempo_estimado_vid = (bateria_log[cpu_fim_idx]) / rate_vid
+        # Playback vídeo
+        if len(tempo_log) - cpu_fim_idx > 2:
+            dbat_vid = bateria_log[cpu_fim_idx] - bateria_log[-1]
+            dt_vid = tempo_log[-1] - tempo_log[cpu_fim_idx]
+            rate_vid = dbat_vid / dt_vid if dt_vid > 0 else 0.0001
+            consumo_vid = dbat_vid
+            tempo_vid = dt_vid
+            if rate_vid > 0:
+                tempo_estimado_vid = (bateria_log[cpu_fim_idx]) / rate_vid
+            else:
+                tempo_estimado_vid = 0
+            cpu_media_video = sum(cpu_log_video_global) / len(cpu_log_video_global) if cpu_log_video_global else 0
         else:
+            consumo_vid = 0
+            tempo_vid = 0
             tempo_estimado_vid = 0
-        tempo_vid = [tempo_log[cpu_fim_idx], tempo_log[cpu_fim_idx] + tempo_estimado_vid]
-        bateria_vid = [bateria_log[cpu_fim_idx], 0]
-        plt.plot(tempo_vid, bateria_vid, '--', color='green', label=f"Estimativa Vídeo ({tempo_estimado_vid/3600:.1f}h)")
-    else:
-        tempo_estimado_vid = 0
+            cpu_media_video = 0
 
-    # Mostrar uso médio da CPU em cada fase no título
-    # (Apenas ilustrativo, pois o log real do uso da CPU não está salvo)
-    cpu_media_video = sum(cpu_log_video_global) / len(cpu_log_video_global) if cpu_log_video_global else 0
-    plt.title(f"Teste de Consumo de Bateria\nEstimativa CPU: {tempo_estimado_cpu/3600:.1f}h | Vídeo: {tempo_estimado_vid/3600:.1f}h | Média CPU vídeo: {cpu_media_video:.1f}%")
+        print("\n==== RESULTADOS DO TESTE ====")
+        print(f"\n--- 100% CPU ---")
+        print(f"Consumo de bateria: {consumo_cpu:.2f}% em {tempo_cpu:.1f}s")
+        print(f"Estimativa de duração: {tempo_estimado_cpu/3600:.2f} horas")
+        print(f"--- Playback de Vídeo ---")
+        print(f"Consumo de bateria: {consumo_vid:.2f}% em {tempo_vid:.1f}s")
+        print(f"Estimativa de duração: {tempo_estimado_vid/3600:.2f} horas")
+        print(f"Consumo médio de CPU no vídeo: {cpu_media_video:.1f}%")
+        # start a tiny Python worker that spins in an infinite loop
 
-    plt.legend()
-    plt.savefig("grafico_bateria.png")
-    plt.show()
+
 
 def cpu_stress():
     texto("Estágio 1: CPU a 100%", center=True)
@@ -126,7 +122,6 @@ def cpu_stress():
     workers = max(0, cpu_count - 1)
     procs = []
     for _ in range(workers):
-        # start a tiny Python worker that spins in an infinite loop
         p = subprocess.Popen([sys.executable, "-c", "while True:\n    pass"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         procs.append(p)
 
