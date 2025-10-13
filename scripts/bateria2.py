@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 
 
 VIDEO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "video_teste.mp4"))
-TEMPO_CPU = 120  # segundos
-TEMPO_VIDEO = 120  # segundos
+TEMPO_CPU = 300  # segundos
+TEMPO_VIDEO = 300  # segundos
 
 # Inicializa pygame
 pygame.init()
@@ -23,8 +23,10 @@ font = pygame.font.SysFont("Arial", 24)
 
 clock = pygame.time.Clock()
 
-bateria_log = []
-tempo_log = []
+bat_log_cpu = []
+time_log_cpu = []
+bat_log_video = []
+time_log_video = []
 cpu_log_video_global = []
 start_time = time.time()
 
@@ -44,29 +46,17 @@ def get_bateria():
         return None
 
 def grafico_final():
-
-    print(f"[DEBUG] bateria_log: {bateria_log}")
-    print(f"[DEBUG] tempo_log: {tempo_log}")
-
-    # Sempre tenta mostrar o relatório, mesmo com poucos dados
+    # Relatório separado para cada fase
     relatorio = ["==== RESULTADOS DO TESTE ====", ""]
 
     # CPU 100%
-    cpu_fim_idx = 0
-    for i, t in enumerate(tempo_log):
-        if t >= TEMPO_CPU:
-            cpu_fim_idx = i
-            break
-    else:
-        cpu_fim_idx = len(tempo_log)-1
-
-    if len(bateria_log) > 1 and cpu_fim_idx > 0:
-        dbat_cpu = bateria_log[0] - bateria_log[cpu_fim_idx]
-        dt_cpu = tempo_log[cpu_fim_idx] - tempo_log[0]
+    if len(bat_log_cpu) > 1:
+        dbat_cpu = bat_log_cpu[0] - bat_log_cpu[-1]
+        dt_cpu = time_log_cpu[-1] - time_log_cpu[0]
         rate_cpu = dbat_cpu / dt_cpu if dt_cpu > 0 else 0.0001
         consumo_cpu = dbat_cpu
         tempo_cpu = dt_cpu
-        tempo_estimado_cpu = (bateria_log[0]) / rate_cpu if rate_cpu > 0 else 0
+        tempo_estimado_cpu = (bat_log_cpu[0]) / rate_cpu if rate_cpu > 0 else 0
         relatorio += [
             "--- 100% CPU ---",
             f"Consumo de bateria: {consumo_cpu:.2f}% em {tempo_cpu:.1f}s",
@@ -77,13 +67,13 @@ def grafico_final():
         relatorio += ["--- 100% CPU ---", "Dados insuficientes.", ""]
 
     # Playback vídeo
-    if len(bateria_log) > cpu_fim_idx+1:
-        dbat_vid = bateria_log[cpu_fim_idx] - bateria_log[-1]
-        dt_vid = tempo_log[-1] - tempo_log[cpu_fim_idx]
+    if len(bat_log_video) > 1:
+        dbat_vid = bat_log_video[0] - bat_log_video[-1]
+        dt_vid = time_log_video[-1] - time_log_video[0]
         rate_vid = dbat_vid / dt_vid if dt_vid > 0 else 0.0001
         consumo_vid = dbat_vid
         tempo_vid = dt_vid
-        tempo_estimado_vid = (bateria_log[cpu_fim_idx]) / rate_vid if rate_vid > 0 else 0
+        tempo_estimado_vid = (bat_log_video[0]) / rate_vid if rate_vid > 0 else 0
         cpu_media_video = sum(cpu_log_video_global) / len(cpu_log_video_global) if cpu_log_video_global else 0
         relatorio += [
             "--- Playback de Vídeo ---",
@@ -138,8 +128,8 @@ def cpu_stress():
                 tempo = now - start_time
                 bateria = get_bateria()
                 if bateria is not None:
-                    bateria_log.append(bateria)
-                    tempo_log.append(round(tempo, 1))
+                    bat_log_cpu.append(bateria)
+                    time_log_cpu.append(round(tempo, 1))
                 # use a short interval to get a recent cpu percent
                 cpu = psutil.cpu_percent(interval=0.1)
                 legenda = f"CPU: {cpu:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%"
