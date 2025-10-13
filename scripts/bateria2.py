@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 
 
 VIDEO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "video_teste.mp4"))
-TEMPO_CPU = 10  # segundos
-TEMPO_VIDEO = 10  # segundos
+TEMPO_CPU = 120  # segundos
+TEMPO_VIDEO = 120  # segundos
 
 # Inicializa pygame
 pygame.init()
