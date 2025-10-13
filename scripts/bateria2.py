@@ -4,7 +4,7 @@ import json
 import requests
 
 # URL da API para envio do relatório
-API_URL = "http://localhost:8000/relatoriorevycheck"  # Altere para o endpoint desejado
+API_URL = "http://revy.selbetti.com.br:8000/relatoriorevycheck"  # Altere para o endpoint desejado
 import pygame
 import psutil
 import time
