@@ -45,6 +45,9 @@ def get_bateria():
 
 def grafico_final():
 
+    print(f"[DEBUG] bateria_log: {bateria_log}")
+    print(f"[DEBUG] tempo_log: {tempo_log}")
+
     if len(bateria_log) < 2 or len(tempo_log) < 2:
         texto("Dados insuficientes para gerar gráfico.", center=True)
         pygame.display.flip()
