@@ -267,13 +267,39 @@ def video_playback():
 
 
 
-# Fluxo principal
-cpu_stress()
-video_playback()
 
-texto("Teste concluído! Gerando gráfico...", center=True)
-pygame.display.flip()
-grafico_final()
-pygame.display.flip()
-time.sleep(5)
-pygame.quit()
+
+
+def main():
+    # Aguarda até que a bateria esteja acima de 90% e não esteja carregando
+    while True:
+        bateria = psutil.sensors_battery()
+        if bateria is None:
+            texto("Não foi possível obter informações da bateria.", center=True)
+            pygame.display.flip()
+            time.sleep(8)
+            pygame.quit()
+            sys.exit()
+        if not bateria.power_plugged and bateria.percent > 90:
+            break
+        msg = f"Aguardando requisitos:\nBateria: {bateria.percent:.1f}%\nPlugada: {'Sim' if bateria.power_plugged else 'Não'}\n\nA bateria deve estar acima de 90% e não pode estar carregando para iniciar o teste."
+        texto(msg, center=True)
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        time.sleep(5)
+
+    cpu_stress()
+    video_playback()
+    texto("Teste concluído! Gerando gráfico...", center=True)
+    pygame.display.flip()
+    grafico_final()
+    pygame.display.flip()
+    time.sleep(5)
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
