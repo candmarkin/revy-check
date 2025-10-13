@@ -1,3 +1,10 @@
+import platform
+import subprocess as sp
+import json
+import requests
+
+# URL da API para envio do relatório
+API_URL = "http://localhost:8000/relatoriorevycheck"  # Altere para o endpoint desejado
 import pygame
 import psutil
 import time
@@ -9,8 +16,8 @@ import matplotlib.pyplot as plt
 
 
 VIDEO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "video_teste.mp4"))
-TEMPO_CPU = 300  # segundos
-TEMPO_VIDEO = 300  # segundos
+TEMPO_CPU = 20  # segundos
+TEMPO_VIDEO = 20  # segundos
 
 # Inicializa pygame
 pygame.init()
@@ -46,8 +53,24 @@ def get_bateria():
         return None
 
 def grafico_final():
-    # Relatório separado para cada fase
-    relatorio = ["==== RESULTADOS DO TESTE ====", ""]
+    # Obtém serial da máquina (Windows)
+    serial = None
+    try:
+        if platform.system() == "Windows":
+            result = sp.check_output(['wmic', 'bios', 'get', 'serialnumber'], universal_newlines=True)
+            lines = result.strip().split('\n')
+            if len(lines) > 1:
+                serial = lines[1].strip()
+        else:
+            # Linux: tenta usar dmidecode
+            result = sp.check_output(['cat', '/sys/class/dmi/id/product_serial'], universal_newlines=True)
+            serial = result.strip()
+    except Exception as e:
+        serial = None
+
+    # Relatório separado para cada fase (dados brutos para JSON)
+    relatorio_json = {}
+    relatorio = [f"==== RESULTADOS DO TESTE - {serial} ====", ""]
 
     # CPU 100%
     if len(bat_log_cpu) > 1:
@@ -63,8 +86,14 @@ def grafico_final():
             f"Estimativa de duração: {tempo_estimado_cpu/3600:.2f} horas",
             ""
         ]
+        relatorio_json["cpu_stress"] = {
+            "consumo_bateria": consumo_cpu,
+            "tempo": tempo_cpu,
+            "estimativa_horas": tempo_estimado_cpu/3600
+        }
     else:
         relatorio += ["--- 100% CPU ---", "Dados insuficientes.", ""]
+        relatorio_json["cpu_stress"] = None
 
     # Playback vídeo
     if len(bat_log_video) > 1:
@@ -81,8 +110,25 @@ def grafico_final():
             f"Estimativa de duração: {tempo_estimado_vid/3600:.2f} horas",
             f"Consumo médio de CPU no vídeo: {cpu_media_video:.1f}%"
         ]
+        relatorio_json["video_playback"] = {
+            "consumo_bateria": consumo_vid,
+            "tempo": tempo_vid,
+            "estimativa_horas": tempo_estimado_vid/3600,
+            "cpu_medio": cpu_media_video
+        }
     else:
         relatorio += ["--- Playback de Vídeo ---", "Dados insuficientes."]
+        relatorio_json["video_playback"] = None
+
+    # Adiciona serial ao JSON
+    relatorio_json["serial"] = serial
+    # Envia o relatório para a API
+    try:
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(API_URL, data=json.dumps(relatorio_json), headers=headers, timeout=5)
+        print(f"[API] Status: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"[API] Falha ao enviar relatório: {e}")
 
     screen.fill((0, 0, 0))
     y = 60
@@ -228,8 +274,6 @@ video_playback()
 texto("Teste concluído! Gerando gráfico...", center=True)
 pygame.display.flip()
 grafico_final()
-
-texto("Gráfico salvo como grafico_bateria.png", center=True)
 pygame.display.flip()
 time.sleep(5)
 pygame.quit()
