@@ -282,8 +282,12 @@ def main():
             sys.exit()
         if not bateria.power_plugged and bateria.percent > 90:
             break
-        msg = f"Aguardando requisitos:\nBateria: {bateria.percent:.1f}%\nPlugada: {'Sim' if bateria.power_plugged else 'Não'}\n\nA bateria deve estar acima de 90% e não pode estar carregando para iniciar o teste."
-        texto(msg, center=True)
+        msg = f"\n\n\n\n"
+        # Separa o msg em avrios textos menores para caber na tela
+        texto("Aguardando requisitos:", center=True)
+        texto(f"Bateria: {bateria.percent:.1f}%", center=True)
+        texto(f"Plugada: {'Sim' if bateria.power_plugged else 'Nao'}", center=True)
+        texto(f"A bateria deve estar acima de 90% e não pode estar carregando para iniciar o teste.", center=True)
         pygame.display.flip()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
