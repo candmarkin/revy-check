@@ -11,6 +11,8 @@ __pycache__/
 # Logs
 *.log
 
+*.mp4
+
 # Distribution / packaging
 build/
 dist/
