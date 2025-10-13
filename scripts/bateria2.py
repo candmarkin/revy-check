@@ -44,13 +44,6 @@ def get_bateria():
         return None
 
 def grafico_final():
-    plt.figure(figsize=(10,5))
-    plt.plot(tempo_log, bateria_log, label="Bateria (%)", color='blue')
-    plt.xlabel("Tempo (s)")
-    plt.ylabel("Nível da Bateria (%)")
-    plt.title("Teste de Consumo de Bateria")
-    plt.xlim(0, 7200)  # 2 horas em segundos
-    plt.grid(True)
 
     # Estimar duração total da bateria para cada fase
     # Fase 1: CPU 100% (primeiros TEMPO_CPU segundos)
