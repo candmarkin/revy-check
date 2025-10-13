@@ -48,13 +48,10 @@ def grafico_final():
     print(f"[DEBUG] bateria_log: {bateria_log}")
     print(f"[DEBUG] tempo_log: {tempo_log}")
 
-    if len(bateria_log) < 2 or len(tempo_log) < 2:
-        texto("Dados insuficientes para gerar gráfico.", center=True)
-        pygame.display.flip()
-        time.sleep(5)
-        return
+    # Sempre tenta mostrar o relatório, mesmo com poucos dados
+    relatorio = ["==== RESULTADOS DO TESTE ====", ""]
 
-
+    # CPU 100%
     cpu_fim_idx = 0
     for i, t in enumerate(tempo_log):
         if t >= TEMPO_CPU:
@@ -63,53 +60,40 @@ def grafico_final():
     else:
         cpu_fim_idx = len(tempo_log)-1
 
-    # CPU 100%
-    if cpu_fim_idx > 1:
+    if len(bateria_log) > 1 and cpu_fim_idx > 0:
         dbat_cpu = bateria_log[0] - bateria_log[cpu_fim_idx]
         dt_cpu = tempo_log[cpu_fim_idx] - tempo_log[0]
         rate_cpu = dbat_cpu / dt_cpu if dt_cpu > 0 else 0.0001
         consumo_cpu = dbat_cpu
         tempo_cpu = dt_cpu
-        if rate_cpu > 0:
-            tempo_estimado_cpu = (bateria_log[0]) / rate_cpu
-        else:
-            tempo_estimado_cpu = 0
+        tempo_estimado_cpu = (bateria_log[0]) / rate_cpu if rate_cpu > 0 else 0
+        relatorio += [
+            "--- 100% CPU ---",
+            f"Consumo de bateria: {consumo_cpu:.2f}% em {tempo_cpu:.1f}s",
+            f"Estimativa de duração: {tempo_estimado_cpu/3600:.2f} horas",
+            ""
+        ]
     else:
-        consumo_cpu = 0
-        tempo_cpu = 0
-        tempo_estimado_cpu = 0
+        relatorio += ["--- 100% CPU ---", "Dados insuficientes.", ""]
 
     # Playback vídeo
-    if len(tempo_log) - cpu_fim_idx > 2:
+    if len(bateria_log) > cpu_fim_idx+1:
         dbat_vid = bateria_log[cpu_fim_idx] - bateria_log[-1]
         dt_vid = tempo_log[-1] - tempo_log[cpu_fim_idx]
         rate_vid = dbat_vid / dt_vid if dt_vid > 0 else 0.0001
         consumo_vid = dbat_vid
         tempo_vid = dt_vid
-        if rate_vid > 0:
-            tempo_estimado_vid = (bateria_log[cpu_fim_idx]) / rate_vid
-        else:
-            tempo_estimado_vid = 0
+        tempo_estimado_vid = (bateria_log[cpu_fim_idx]) / rate_vid if rate_vid > 0 else 0
         cpu_media_video = sum(cpu_log_video_global) / len(cpu_log_video_global) if cpu_log_video_global else 0
+        relatorio += [
+            "--- Playback de Vídeo ---",
+            f"Consumo de bateria: {consumo_vid:.2f}% em {tempo_vid:.1f}s",
+            f"Estimativa de duração: {tempo_estimado_vid/3600:.2f} horas",
+            f"Consumo médio de CPU no vídeo: {cpu_media_video:.1f}%"
+        ]
     else:
-        consumo_vid = 0
-        tempo_vid = 0
-        tempo_estimado_vid = 0
-        cpu_media_video = 0
+        relatorio += ["--- Playback de Vídeo ---", "Dados insuficientes."]
 
-    # Exibe o relatório final em uma tela Pygame
-    relatorio = [
-        "==== RESULTADOS DO TESTE ====",
-        "",
-        "--- 100% CPU ---",
-        f"Consumo de bateria: {consumo_cpu:.2f}% em {tempo_cpu:.1f}s",
-        f"Estimativa de duração: {tempo_estimado_cpu/3600:.2f} horas",
-        "",
-        "--- Playback de Vídeo ---",
-        f"Consumo de bateria: {consumo_vid:.2f}% em {tempo_vid:.1f}s",
-        f"Estimativa de duração: {tempo_estimado_vid/3600:.2f} horas",
-        f"Consumo médio de CPU no vídeo: {cpu_media_video:.1f}%"
-    ]
     screen.fill((0, 0, 0))
     y = 60
     for linha in relatorio:
