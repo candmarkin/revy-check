@@ -471,7 +471,7 @@ def play_speaker_sequence():
         generate_tone(freq, DURATION, "both").play()
         time.sleep(DURATION + 0.3)
     draw_text(["✅ Teste de alto-falantes concluído!"], (0, 255, 0))
-    log_data.append({"step":"SPEAKER_TEST","time":str(datetime.now())})
+    log_data.append({"step":"SPEAKER_TEST","time":str(datetime.now()), "result":"APROVADO"})
     time.sleep(1)
 
 def test_microphone_bip():
@@ -489,9 +489,10 @@ def test_microphone_bip():
     passed = amplitude > threshold
     if passed:
         draw_text(["✅ Microfone detectou o bip!"], (0, 255, 0))
+        log_data.append({"step":"MICROPHONE_TEST","time":str(datetime.now()), "result":"APROVADO"})
     else:
         draw_text(["❌ Microfone não detectou o bip!"], (255, 0, 0))
-    log_data.append({"step":"MICROPHONE_TEST","passed":passed,"amplitude":amplitude,"time":str(datetime.now())})
+        log_data.append({"step":"MICROPHONE_TEST","time":str(datetime.now()), "result":"REPROVADO"})
     time.sleep(2)
 
 # ---------------- PULSEAUDIO ---------------- #
@@ -742,7 +743,7 @@ def keyboard_step():
 
         if unlocked:
             draw_text(["✅ Teste de teclado concluído!"], (0, 255, 0))
-            log_data.append({"step":"KEYBOARD_TEST","time":str(datetime.now())})
+            log_data.append({"step":"KEYBOARD_TEST","time":str(datetime.now()), "result":"APROVADO"})
             time.sleep(1)
             running = False
 
@@ -893,7 +894,7 @@ def ethernet_step():
                     waiting_remove = True
                     time.sleep(0.5)
                     draw_text(["✅ Teste Ethernet concluído!"], (0, 255, 0))
-                    log_data.append({"step":"ETHERNET_TEST","time":str(datetime.now())})
+                    log_data.append({"step":"ETHERNET_TEST","time":str(datetime.now()), "result":"APROVADO"})
                     time.sleep(1)
                     break
         CLOCK.tick(5)
@@ -1033,14 +1034,14 @@ def main():
                 draw_text([f"Conecte o pendrive na {port_name}..."])
                 if port_has_device(bus, port_id):
                     waiting_remove = True
-                    log_data.append({"step":f"USB_CONNECT_{port_name}","time":str(datetime.now())})
+                    log_data.append({"step":f"USB_CONNECT_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                     time.sleep(0.5)
             else:
                 draw_text([f"Remova o pendrive da {port_name}..."])
                 if not port_has_device(bus, port_id):
                     step += 1
                     waiting_remove = False
-                    log_data.append({"step":f"USB_REMOVE_{port_name}","time":str(datetime.now())})
+                    log_data.append({"step":f"USB_REMOVE_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                     time.sleep(0.5)
             if step >= len(PORT_MAP):
                 state = "VIDEO_STEP"
@@ -1057,7 +1058,7 @@ def main():
         elif state == "HEADPHONE_STEP":
             draw_text(["👉 Conecte o headphone..."])
             if headphone_connected():
-                log_data.append({"step":"HEADPHONE_CONNECT","time":str(datetime.now())})
+                log_data.append({"step":"HEADPHONE_CONNECT","time":str(datetime.now()), "result":"APROVADO"})
                 state = "HEADPHONE_TESTING"
                 time.sleep(0.5)
 
@@ -1068,7 +1069,7 @@ def main():
         elif state == "HEADPHONE_REMOVE":
             draw_text(["👉 Remova o headphone..."])
             if not headphone_connected():
-                log_data.append({"step":"HEADPHONE_REMOVE","time":str(datetime.now())})
+                log_data.append({"step":"HEADPHONE_REMOVE","time":str(datetime.now()), "result":"APROVADO"})
                 state = "SPEAKER_STEP"
                 time.sleep(0.5)
 
@@ -1126,15 +1127,8 @@ def save_log():
                     time_val = datetime.now()
             else:
                 time_val = datetime.now()
-            approved = None
-            # tenta pegar campo approved/result
-            if "approved" in entry:
-                approved = int(bool(entry["approved"]))
-            elif "result" in entry:
-                if str(entry["result"]).upper() == "APROVADO":
-                    approved = 1
-                elif str(entry["result"]).upper() == "REPROVADO":
-                    approved = 0
+            approved = entry.get("result", "REPROVADO") == "APROVADO"
+            print(f"Salvando log: {device_serial}, {step}, {time_val}, {approved}")
             # Insere na tabela logs
             cursor.execute(
                 "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
