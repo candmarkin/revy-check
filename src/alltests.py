@@ -339,6 +339,8 @@ def fetch_device_info():
         cursor.execute("SELECT * FROM devices WHERE id=%s", (device_id,))
         device = cursor.fetchone()
 
+    conn.close()
+
     
     return {
         "PORT_MAP": port_map,
@@ -964,7 +966,7 @@ def start_step():
         CLOCK.tick(30)
 
 def main():
-    global MODE  # Declare no início
+    global MODE
     clock = pygame.time.Clock()
     state = "START_STEP"
     step = 0
@@ -1049,12 +1051,13 @@ def main():
             outputs, all_done = get_video_status()
             draw_video(outputs)
             if all_done:
-                draw_text(["✅ Video test ok! Pressione ESC para continuar"], (0, 255, 0))
+                draw_text(["Video test ok!"], (0, 255, 0))
+                time.sleep(1)
                 state = "HEADPHONE_STEP" if HAS_HEADPHONE_JACK else "SPEAKER_STEP"
 
         # ---------------- HEADPHONE ---------------- #
         elif state == "HEADPHONE_STEP":
-            draw_text(["👉 Conecte o headphone..."])
+            draw_text(["Conecte o headphone..."])
             if headphone_connected():
                 log_data.append({"step":"HEADPHONE_CONNECT","time":str(datetime.now()), "result":"APROVADO"})
                 state = "HEADPHONE_TESTING"
@@ -1065,7 +1068,7 @@ def main():
             state = "HEADPHONE_REMOVE"
 
         elif state == "HEADPHONE_REMOVE":
-            draw_text(["👉 Remova o headphone..."])
+            draw_text(["Remova o headphone..."])
             if not headphone_connected():
                 log_data.append({"step":"HEADPHONE_REMOVE","time":str(datetime.now()), "result":"APROVADO"})
                 state = "SPEAKER_STEP"
@@ -1093,9 +1096,9 @@ def main():
         elif state == "DONE":
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
             time.sleep(1)
-            save_log()
             SCREEN.fill((0, 200, 0))
-            draw_text(["Relatório salvo com sucesso. Você pode desligar o computador agora"], (0, 255, 0))
+            draw_text([save_log()], (0, 255, 0))
+            
 
         CLOCK.tick(10)
 
@@ -1106,13 +1109,13 @@ def save_log():
 
     # Salva no banco logs
     try:
-        conn = mysql.connector.connect(
+        conn2 = mysql.connector.connect(
             host="revy.selbetti.com.br",
             user="drack",
             password="jdVg2dF2@",
             database="revycheck"
         )
-        cursor = conn.cursor()
+        cursor = conn2.cursor()
         # Tenta obter serial do dispositivo
         try:
             device_serial = subprocess.check_output("cat /sys/class/dmi/id/product_serial", shell=True).strip().decode("utf-8")
@@ -1136,12 +1139,12 @@ def save_log():
                 "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
                 (device_serial, step, time_val, approved)
             )
-        conn.commit()
+        conn2.commit()
         cursor.close()
-        conn.close()
-        print("Log salvo na tabela logs do MySQL.")
+        conn2.close()
+        return "Log salvo com sucesso!"
     except Exception as e:
-        print(f"Erro ao salvar log no banco: {e}")
+        return f"Erro ao salvar log no banco: {e}"
 
 
 if __name__ == "__main__":
