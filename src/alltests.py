@@ -128,7 +128,7 @@ def cadastro_portas():
 
     # ----------------- OBTÉM INFORMAÇÕES BÁSICAS DO SISTEMA -----------------
     try:
-        manufacturer = subprocess.check_output("cat /sys/class/dmi/id/sys_vendorr", shell=True).strip().decode("utf-8")
+        manufacturer = subprocess.check_output("cat /sys/class/dmi/id/sys_vendor", shell=True).strip().decode("utf-8")
     except Exception:
         manufacturer = ""
     try:
@@ -1093,7 +1093,9 @@ def main():
 
         # ---------------- DONE ---------------- #
         elif state == "DONE":
-            draw_text(["✅ Todos os testes concluídos!"], (0, 255, 0))
+            draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
+            save_log()
+            draw_text(["Relatório salvo com sucesso. Você pode desligar o computador agora"], (0, 255, 0))
 
         CLOCK.tick(10)
 
@@ -1148,6 +1150,5 @@ if __name__ == "__main__":
         main()
     finally:
         restore_alt_tab()
-        save_log()
         pygame.quit()
         sys.exit()
