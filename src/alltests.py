@@ -291,13 +291,12 @@ BLACK = (0, 0, 0)
 GRAY = (180, 180, 180)
 GREEN = (0, 200, 0)
 
-print("Aguarde, carregando informações do dispositivo...")
-time.sleep(5)
-
 
 import mysql.connector
 
 def fetch_device_info():
+
+
     conn = mysql.connector.connect(
         host="revy.selbetti.com.br",
         user="drack",
@@ -809,7 +808,6 @@ def screen_step():
     # Grava resultado no log
     result = "APROVADO" if approved else "REPROVADO"
     log_data.append({"step": "SCREEN_TEST", "time": str(datetime.now()), "result": result})
-    save_log()
 
 
 # ---------------- USB ---------------- #
@@ -1094,7 +1092,9 @@ def main():
         # ---------------- DONE ---------------- #
         elif state == "DONE":
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
+            time.sleep(1)
             save_log()
+            SCREEN.fill((0, 200, 0))
             draw_text(["Relatório salvo com sucesso. Você pode desligar o computador agora"], (0, 255, 0))
 
         CLOCK.tick(10)
