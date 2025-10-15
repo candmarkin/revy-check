@@ -12,7 +12,7 @@ import mysql.connector
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 
-# ----------------- APP CADASTRO -----------------
+# ---------------- APP CADASTRO ----------------
 def has_pendrive_connected_cd():
     try:
         outputA = subprocess.check_output(["lsusb", "-t"], text=True)
