@@ -1095,6 +1095,7 @@ def main():
         # ---------------- DONE ---------------- #
         elif state == "DONE":
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
+            log_data.append({"step":"TEST_STOP","time":str(datetime.now()), "result":"APROVADO"})
             time.sleep(1)
             SCREEN.fill((0, 200, 0))
             draw_text([save_log()], (0, 255, 0))
