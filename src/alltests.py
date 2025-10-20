@@ -294,6 +294,11 @@ GREEN = (0, 200, 0)
 
 import mysql.connector
 
+def add_log(step, time, result="APROVADO"):
+    entry = {"step": step, "time": str(datetime.now()), "result": result}
+    if not any(e["step"] == step for e in log_data):
+        add_log(entry)
+
 def fetch_device_info():
 
 
@@ -472,7 +477,7 @@ def play_speaker_sequence():
         generate_tone(freq, DURATION, "both").play()
         time.sleep(DURATION + 0.3)
     draw_text(["✅ Teste de alto-falantes concluído!"], (0, 255, 0))
-    log_data.append({"step":"SPEAKER_TEST","time":str(datetime.now()), "result":"APROVADO"})
+    add_log({"step":"SPEAKER_TEST","time":str(datetime.now()), "result":"APROVADO"})
     time.sleep(1)
 
 def test_microphone_bip():
@@ -490,10 +495,10 @@ def test_microphone_bip():
     passed = amplitude > threshold
     if passed:
         draw_text(["✅ Microfone detectou o bip!"], (0, 255, 0))
-        log_data.append({"step":"MICROPHONE_TEST","time":str(datetime.now()), "result":"APROVADO"})
+        add_log({"step":"MICROPHONE_TEST","time":str(datetime.now()), "result":"APROVADO"})
     else:
         draw_text(["❌ Microfone não detectou o bip!"], (255, 0, 0))
-        log_data.append({"step":"MICROPHONE_TEST","time":str(datetime.now()), "result":"REPROVADO"})
+        add_log({"step":"MICROPHONE_TEST","time":str(datetime.now()), "result":"REPROVADO"})
     time.sleep(2)
 
 # ---------------- PULSEAUDIO ---------------- #
@@ -744,7 +749,7 @@ def keyboard_step():
 
         if unlocked:
             draw_text(["✅ Teste de teclado concluído!"], (0, 255, 0))
-            log_data.append({"step":"KEYBOARD_TEST","time":str(datetime.now()), "result":"APROVADO"})
+            add_log({"step":"KEYBOARD_TEST","time":str(datetime.now()), "result":"APROVADO"})
             time.sleep(1)
             running = False
 
@@ -809,7 +814,7 @@ def screen_step():
 
     # Grava resultado no log
     result = "APROVADO" if approved else "REPROVADO"
-    log_data.append({"step": "SCREEN_TEST", "time": str(datetime.now()), "result": result})
+    add_log({"step": "SCREEN_TEST", "time": str(datetime.now()), "result": result})
 
 
 # ---------------- USB ---------------- #
@@ -894,7 +899,7 @@ def ethernet_step():
                     waiting_remove = True
                     time.sleep(0.5)
                     draw_text(["✅ Teste Ethernet concluído!"], (0, 255, 0))
-                    log_data.append({"step":"ETHERNET_TEST","time":str(datetime.now()), "result":"APROVADO"})
+                    add_log({"step":"ETHERNET_TEST","time":str(datetime.now()), "result":"APROVADO"})
                     time.sleep(1)
                     break
         CLOCK.tick(5)
@@ -963,7 +968,7 @@ def start_step():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if button_rect.collidepoint(event.pos):
                     waiting = False
-                    log_data.append({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                    add_log({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
         CLOCK.tick(30)
 
 def main():
@@ -1016,46 +1021,46 @@ def main():
         # ---------------- START ---------------- #
         if state == "START_STEP":
             start_step()
-            log_data.append({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+            add_log({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
             state = "SCREEN_STEP"
             continue
 
         # ---------------- TELA ---------------- #
         if state == "SCREEN_STEP":
             if HAS_EMBEDDED_SCREEN:
-                log_data.append({"step":"SCREEN_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":"SCREEN_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 screen_step()
             state = "KEYBOARD_STEP"
         # ---------------- TECLADO ---------------- #
         if state == "KEYBOARD_STEP":
             if HAS_EMBEDDED_KEYBOARD:
-                log_data.append({"step":"KEYBOARD_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":"KEYBOARD_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 keyboard_step()
             state = "USB_STEP"
         # ---------------- USB ---------------- #
         elif state == "USB_STEP" and step < len(PORT_MAP):
             bus, port_id, port_name = PORT_MAP[step]
-            log_data.append({"step":f"USB_CONNECT_START_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
             if not waiting_remove:
+                add_log({"step":f"USB_CONNECT_START_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                 draw_text([f"Conecte o pendrive na {port_name}..."])
                 if port_has_device(bus, port_id):
                     waiting_remove = True
-                    log_data.append({"step":f"USB_CONNECT_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
+                    add_log({"step":f"USB_CONNECT_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                     time.sleep(0.5)
             else:
                 draw_text([f"Remova o pendrive da {port_name}..."])
-                log_data.append({"step":f"USB_REMOVE_START{port_name}","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":f"USB_REMOVE_START{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                 if not port_has_device(bus, port_id):
                     step += 1
                     waiting_remove = False
-                    log_data.append({"step":f"USB_REMOVE_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
+                    add_log({"step":f"USB_REMOVE_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                     time.sleep(0.5)
             if step >= len(PORT_MAP):
                 state = "VIDEO_STEP"
 
         # ---------------- VIDEO ---------------- #
         elif state == "VIDEO_STEP":
-            log_data.append({"step":"VIDEO_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+            add_log({"step":"VIDEO_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
             outputs, all_done = get_video_status()
             draw_video(outputs)
             if all_done:
@@ -1065,54 +1070,59 @@ def main():
 
         # ---------------- HEADPHONE ---------------- #
         elif state == "HEADPHONE_STEP":
-            log_data.append({"step":"HEADPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+            # append 1 vez o step headphone test start no log data
+            isAppended = False
+            if not isAppended:
+                add_log({"step":"HEADPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                isAppended = True
+
             draw_text(["Conecte o headphone..."])
             if headphone_connected():
-                log_data.append({"step":"HEADPHONE_CONNECT","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":"HEADPHONE_CONNECT","time":str(datetime.now()), "result":"APROVADO"})
                 state = "HEADPHONE_TESTING"
                 time.sleep(0.5)
 
         elif state == "HEADPHONE_TESTING":
-            log_data.append({"step":"HEADPHONE_TESTING","time":str(datetime.now()), "result":"APROVADO"})
+            add_log({"step":"HEADPHONE_TESTING","time":str(datetime.now()), "result":"APROVADO"})
             play_headphone_sequence()
             state = "HEADPHONE_REMOVE"
 
         elif state == "HEADPHONE_REMOVE":
             draw_text(["Remova o headphone..."])
             if not headphone_connected():
-                log_data.append({"step":"HEADPHONE_REMOVE","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":"HEADPHONE_REMOVE","time":str(datetime.now()), "result":"APROVADO"})
                 state = "SPEAKER_STEP"
                 time.sleep(0.5)
 
         # ---------------- SPEAKER ---------------- #
         elif state == "SPEAKER_STEP":
             if HAS_SPEAKER:
-                log_data.append({"step":"SPEAKER_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":"SPEAKER_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 play_speaker_sequence()
             state = "MIC_STEP"
 
         # ---------------- MICROFONE ---------------- #
         elif state == "MIC_STEP":
             if HAS_MICROPHONE:
-                log_data.append({"step":"MICROPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":"MICROPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 test_microphone_bip()
             state = "ETHERNET_STEP"
 
         # ---------------- ETHERNET ---------------- #
         elif state == "ETHERNET_STEP":
             if HAS_ETHERNET_PORT:
-                log_data.append({"step":"ETHERNET_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":"ETHERNET_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 ethernet_step()
             state = "DONE"
 
         # ---------------- DONE ---------------- #
         elif state == "DONE":
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
-            log_data.append({"step": "TEST_STOP", "time": str(datetime.now()), "result": "APROVADO"})
+            add_log({"step": "TEST_STOP", "time": str(datetime.now()), "result": "APROVADO"})
             save_log()
             draw_text(["Todos os testes concluídos!"], (0, 0, 0))
             pygame.display.flip()
-            time.sleep(2)
+            time.sleep(5)
             running = False
             
 
