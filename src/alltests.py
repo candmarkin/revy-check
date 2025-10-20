@@ -229,7 +229,7 @@ def cadastro_portas():
                             bus = "unknown"
                         confirm = messagebox.askyesno("Confirmação", f"Bus: {bus}\nPorta: {port_id}\nLabel: {new_port}\n\nConfirmar cadastro?")
                         if confirm:
-                            PORT_MAP.append({"bus": bus, "port": f"Port: {port_id}:", "label": new_port})
+                            PORT_MAP.append({"bus": bus, "port": f"Port {port_id}:", "label": new_port})
                             wait_for_ok("Porta cadastrada com sucesso!\n\nRemova todos os pendrives conectados...")
             # espera remoção do pendrive
             temusb = has_pendrive_connected_cd()
@@ -963,6 +963,7 @@ def start_step():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if button_rect.collidepoint(event.pos):
                     waiting = False
+                    log_data.append({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
         CLOCK.tick(30)
 
 def main():
@@ -1107,7 +1108,6 @@ def main():
         elif state == "DONE":
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
             log_data.append({"step":"TEST_STOP","time":str(datetime.now()), "result":"APROVADO"})
-            time.sleep(1)
             SCREEN.fill((0, 200, 0))
             save_log()
             draw_text(["Todos os testes concluídos!"], (0, 255, 0))
