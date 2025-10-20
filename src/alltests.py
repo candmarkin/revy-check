@@ -968,7 +968,6 @@ def start_step():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if button_rect.collidepoint(event.pos):
                     waiting = False
-                    add_log({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
         CLOCK.tick(30)
 
 def main():
