@@ -1014,22 +1014,26 @@ def main():
         # ---------------- START ---------------- #
         if state == "START_STEP":
             start_step()
+            log_data.append({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
             state = "SCREEN_STEP"
             continue
 
         # ---------------- TELA ---------------- #
         if state == "SCREEN_STEP":
             if HAS_EMBEDDED_SCREEN:
+                log_data.append({"step":"SCREEN_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 screen_step()
             state = "KEYBOARD_STEP"
         # ---------------- TECLADO ---------------- #
         if state == "KEYBOARD_STEP":
             if HAS_EMBEDDED_KEYBOARD:
+                log_data.append({"step":"KEYBOARD_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 keyboard_step()
             state = "USB_STEP"
         # ---------------- USB ---------------- #
         elif state == "USB_STEP" and step < len(PORT_MAP):
             bus, port_id, port_name = PORT_MAP[step]
+            log_data.append({"step":f"USB_CONNECT_START_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
             if not waiting_remove:
                 draw_text([f"Conecte o pendrive na {port_name}..."])
                 if port_has_device(bus, port_id):
@@ -1038,6 +1042,7 @@ def main():
                     time.sleep(0.5)
             else:
                 draw_text([f"Remova o pendrive da {port_name}..."])
+                log_data.append({"step":f"USB_REMOVE_START{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                 if not port_has_device(bus, port_id):
                     step += 1
                     waiting_remove = False
@@ -1048,6 +1053,7 @@ def main():
 
         # ---------------- VIDEO ---------------- #
         elif state == "VIDEO_STEP":
+            log_data.append({"step":"VIDEO_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
             outputs, all_done = get_video_status()
             draw_video(outputs)
             if all_done:
@@ -1057,6 +1063,7 @@ def main():
 
         # ---------------- HEADPHONE ---------------- #
         elif state == "HEADPHONE_STEP":
+            log_data.append({"step":"HEADPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
             draw_text(["Conecte o headphone..."])
             if headphone_connected():
                 log_data.append({"step":"HEADPHONE_CONNECT","time":str(datetime.now()), "result":"APROVADO"})
@@ -1064,6 +1071,7 @@ def main():
                 time.sleep(0.5)
 
         elif state == "HEADPHONE_TESTING":
+            log_data.append({"step":"HEADPHONE_TESTING","time":str(datetime.now()), "result":"APROVADO"})
             play_headphone_sequence()
             state = "HEADPHONE_REMOVE"
 
@@ -1077,18 +1085,21 @@ def main():
         # ---------------- SPEAKER ---------------- #
         elif state == "SPEAKER_STEP":
             if HAS_SPEAKER:
+                log_data.append({"step":"SPEAKER_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 play_speaker_sequence()
             state = "MIC_STEP"
 
         # ---------------- MICROFONE ---------------- #
         elif state == "MIC_STEP":
             if HAS_MICROPHONE:
+                log_data.append({"step":"MICROPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 test_microphone_bip()
             state = "ETHERNET_STEP"
 
         # ---------------- ETHERNET ---------------- #
         elif state == "ETHERNET_STEP":
             if HAS_ETHERNET_PORT:
+                log_data.append({"step":"ETHERNET_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 ethernet_step()
             state = "DONE"
 
@@ -1098,7 +1109,8 @@ def main():
             log_data.append({"step":"TEST_STOP","time":str(datetime.now()), "result":"APROVADO"})
             time.sleep(1)
             SCREEN.fill((0, 200, 0))
-            draw_text([save_log()], (0, 255, 0))
+            save_log()
+            draw_text(["Todos os testes concluídos!"], (0, 255, 0))
             
 
         CLOCK.tick(10)

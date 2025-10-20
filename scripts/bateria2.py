@@ -9,24 +9,34 @@ import pygame
 import psutil
 import time
 import sys
-import subprocess
 import os
 import cv2
-import matplotlib.pyplot as plt
+import ctypes
+import multiprocessing
 
-
-VIDEO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "video_teste.mp4"))
+# Support running from a PyInstaller bundle: use sys._MEIPASS when available
+if getattr(sys, 'frozen', False):
+    _base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+else:
+    _base_path = os.path.dirname(__file__)
+VIDEO_PATH = os.path.abspath(os.path.join(_base_path, "video_teste.mp4"))
 TEMPO_CPU = 300  # segundos
 TEMPO_VIDEO = 300  # segundos
+BATERIA_MINIMA = 90 # porcentagem mínima para iniciar o teste
 
 # Inicializa pygame
 pygame.init()
 # seta pra rodar fullscreen na resolucao do monitor principal
 info = pygame.display.Info()
 WIDTH, HEIGHT = info.current_w, info.current_h
-screen = pygame.display.set_mode((WIDTH, HEIGHT), display=0)
+screen = pygame.display.set_mode((WIDTH, HEIGHT), display=0, flags=pygame.FULLSCREEN)
 pygame.display.set_caption("Teste de Bateria Automático")
 font = pygame.font.SysFont("Arial", 24)
+
+# Mantém a janela principal sempre no topo (Windows)
+if sys.platform == "win32":
+    hwnd = pygame.display.get_wm_info()['window']
+    ctypes.windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 3)
 
 clock = pygame.time.Clock()
 
@@ -52,27 +62,54 @@ def get_bateria():
     except:
         return None
 
+
+# worker implementation is in scripts/worker_cpu.py to keep child imports lightweight
+def cpu_worker(stop_event):
+    """Simple CPU-bound worker that runs until stop_event is set.
+    Keep this module minimal so importing it in child processes doesn't run GUI code.
+    """
+    rng = range
+    while not stop_event.is_set():
+        # tight CPU-bound loop
+        _ = sum(i * i for i in rng(30000))
+        # small sleep can reduce wasteful busyspin if desired
+        # time.sleep(0)
+
+
 def grafico_final():
-    # Obtém serial da máquina (Windows)
+    import matplotlib.pyplot as plt
+
+    # Obtém serial da máquina
     serial = None
     try:
         if platform.system() == "Windows":
-            result = sp.check_output(['wmic', 'bios', 'get', 'serialnumber'], universal_newlines=True)
-            lines = result.strip().split('\n')
-            if len(lines) > 1:
-                serial = lines[1].strip()
+            try:
+                ps_cmd = ['powershell', '-NoLogo', '-NoProfile', '-Command',
+                          "Get-CimInstance -ClassName Win32_Bios | Select-Object -ExpandProperty SerialNumber"]
+                result = sp.check_output(ps_cmd, universal_newlines=True)
+                serial = result.strip()
+            except Exception:
+                try:
+                    result = sp.check_output(['wmic', 'bios', 'get', 'serialnumber'], universal_newlines=True)
+                    lines = result.strip().split('\n')
+                    if len(lines) > 1:
+                        serial = lines[1].strip()
+                except Exception:
+                    serial = None
         else:
-            # Linux: tenta usar dmidecode
-            result = sp.check_output(['cat', '/sys/class/dmi/id/product_serial'], universal_newlines=True)
-            serial = result.strip()
-    except Exception as e:
+            try:
+                result = sp.check_output(['cat', '/sys/class/dmi/id/product_serial'], universal_newlines=True)
+                serial = result.strip()
+            except Exception:
+                serial = None
+    except Exception:
         serial = None
 
-    # Relatório separado para cada fase (dados brutos para JSON)
+    # Relatório e dados brutos
     relatorio_json = {}
     relatorio = [f"==== RESULTADOS DO TESTE - {serial} ====", ""]
 
-    # CPU 100%
+    # === CPU 100% ===
     if len(bat_log_cpu) > 1:
         dbat_cpu = bat_log_cpu[0] - bat_log_cpu[-1]
         dt_cpu = time_log_cpu[-1] - time_log_cpu[0]
@@ -80,6 +117,7 @@ def grafico_final():
         consumo_cpu = dbat_cpu
         tempo_cpu = dt_cpu
         tempo_estimado_cpu = (bat_log_cpu[0]) / rate_cpu if rate_cpu > 0 else 0
+
         relatorio += [
             "--- 100% CPU ---",
             f"Consumo de bateria: {consumo_cpu:.2f}% em {tempo_cpu:.1f}s",
@@ -89,13 +127,27 @@ def grafico_final():
         relatorio_json["cpu_stress"] = {
             "consumo_bateria": consumo_cpu,
             "tempo": tempo_cpu,
-            "estimativa_horas": tempo_estimado_cpu/3600
+            "estimativa_horas": tempo_estimado_cpu / 3600
         }
+
+        # Gera gráfico da bateria (CPU)
+        plt.figure()
+        plt.plot(time_log_cpu, bat_log_cpu, color="red", linewidth=2)
+        plt.title("Variação da Bateria - Teste CPU 100%")
+        plt.xlabel("Tempo (s)")
+        plt.ylabel("Nível da bateria (%)")
+        plt.grid(True)
+        plt.tight_layout()
+        cpu_plot_path = os.path.join(os.getcwd(), f"grafico_cpu_{serial or 'semserial'}.png")
+        plt.savefig(cpu_plot_path)
+        plt.close()
+        print(f"[INFO] Gráfico CPU salvo em {cpu_plot_path}")
+
     else:
         relatorio += ["--- 100% CPU ---", "Dados insuficientes.", ""]
         relatorio_json["cpu_stress"] = None
 
-    # Playback vídeo
+    # === Playback de Vídeo ===
     if len(bat_log_video) > 1:
         dbat_vid = bat_log_video[0] - bat_log_video[-1]
         dt_vid = time_log_video[-1] - time_log_video[0]
@@ -104,6 +156,7 @@ def grafico_final():
         tempo_vid = dt_vid
         tempo_estimado_vid = (bat_log_video[0]) / rate_vid if rate_vid > 0 else 0
         cpu_media_video = sum(cpu_log_video_global) / len(cpu_log_video_global) if cpu_log_video_global else 0
+
         relatorio += [
             "--- Playback de Vídeo ---",
             f"Consumo de bateria: {consumo_vid:.2f}% em {tempo_vid:.1f}s",
@@ -113,16 +166,31 @@ def grafico_final():
         relatorio_json["video_playback"] = {
             "consumo_bateria": consumo_vid,
             "tempo": tempo_vid,
-            "estimativa_horas": tempo_estimado_vid/3600,
+            "estimativa_horas": tempo_estimado_vid / 3600,
             "cpu_medio": cpu_media_video
         }
+
+        # Gera gráfico da bateria (vídeo)
+        plt.figure()
+        plt.plot(time_log_video, bat_log_video, color="blue", linewidth=2)
+        plt.title("Variação da Bateria - Playback de Vídeo")
+        plt.xlabel("Tempo (s)")
+        plt.ylabel("Nível da bateria (%)")
+        plt.grid(True)
+        plt.tight_layout()
+        video_plot_path = os.path.join(os.getcwd(), f"grafico_video_{serial or 'semserial'}.png")
+        plt.savefig(video_plot_path)
+        plt.close()
+        print(f"[INFO] Gráfico Vídeo salvo em {video_plot_path}")
+
     else:
         relatorio += ["--- Playback de Vídeo ---", "Dados insuficientes."]
         relatorio_json["video_playback"] = None
 
     # Adiciona serial ao JSON
     relatorio_json["serial"] = serial
-    # Envia o relatório para a API
+
+    # Envia o relatório
     try:
         headers = {"Content-Type": "application/json"}
         response = requests.post(API_URL, data=json.dumps(relatorio_json), headers=headers, timeout=5)
@@ -130,15 +198,17 @@ def grafico_final():
     except Exception as e:
         print(f"[API] Falha ao enviar relatório: {e}")
 
+    # Mostra resultados no pygame
     screen.fill((0, 0, 0))
     y = 60
     for linha in relatorio:
         t = font.render(linha, True, (255, 255, 255))
-        rect = t.get_rect(center=(WIDTH//2, y))
+        rect = t.get_rect(center=(WIDTH // 2, y))
         screen.blit(t, rect)
         y += 50
     pygame.display.flip()
-    # Aguarda o usuário pressionar uma tecla para sair
+
+    # Aguarda o usuário pressionar uma tecla
     esperando = True
     while esperando:
         for event in pygame.event.get():
@@ -149,63 +219,69 @@ def grafico_final():
         time.sleep(0.1)
 
 
-
 def cpu_stress():
     texto("Estágio 1: CPU a 100%", center=True)
     pygame.display.flip()
     end = time.time() + TEMPO_CPU
     last_bat_log = time.time()
-    # Spawn subprocess workers to utilize other CPU cores (avoids multiprocessing spawn issues)
-    cpu_count = os.cpu_count() or 1
-    workers = max(0, cpu_count - 1)
-    procs = []
-    for _ in range(workers):
-        p = subprocess.Popen([sys.executable, "-c", "while True:\n    pass"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        procs.append(p)
 
-    try:
-        # Main process will also perform CPU work so overall usage approximates 100%
-        while time.time() < end:
-            # Busy work to use CPU in main process
-            _ = sum(i*i for i in range(20000))
-            # Atualiza tela e log de bateria a cada 0.5s
-            now = time.time()
-            if now - last_bat_log > 0.5:
-                tempo = now - start_time
-                bateria = get_bateria()
-                if bateria is not None:
-                    bat_log_cpu.append(bateria)
-                    time_log_cpu.append(round(tempo, 1))
-                # use a short interval to get a recent cpu percent
-                cpu = psutil.cpu_percent(interval=0.1)
-                legenda = f"CPU: {cpu:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%"
-                screen.fill((0,0,0))
-                t = font.render("Estágio 1: CPU a 100%", True, (255,255,255))
-                screen.blit(t, (30, 100))
-                t2 = font.render(legenda, True, (255, 255, 0))
-                screen.blit(t2, (30, 30))
-                pygame.display.flip()
-                last_bat_log = now
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    raise KeyboardInterrupt
-    except KeyboardInterrupt:
-        pass
-    finally:
-        # terminate worker subprocesses
-        for p in procs:
-            try:
-                p.terminate()
-            except Exception:
-                pass
-        for p in procs:
-            try:
-                p.wait(timeout=1)
-            except Exception:
-                try:
-                    p.kill()
-                except Exception:
-                    pass
+    stop_event = multiprocessing.Event()
+    num_cores = os.cpu_count() or 4
+
+    # Cria um processo por núcleo
+    workers = [
+        multiprocessing.Process(target=cpu_worker, args=(stop_event,))
+        for _ in range(num_cores)
+    ]
+
+    # Inicia todos
+    for w in workers:
+        w.start()
+
+    print(f"[INFO] Estressando CPU com {num_cores} núcleos por {TEMPO_CPU} segundos...")
+
+    # Loop de monitoramento e logging
+    while time.time() < end:
+        cpu_usage = psutil.cpu_percent(interval=1)
+        bateria = get_bateria()
+
+        # Loga tempo e nível de bateria
+        bat_log_cpu.append(bateria if bateria is not None else 0)
+        time_log_cpu.append(time.time() - start_time)
+
+        # Atualiza tela
+        legenda = f"CPU: {cpu_usage:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%"
+        screen.fill((0, 0, 0))
+        t = font.render(legenda, True, (255, 255, 0))
+        screen.blit(t, (30, 30))
+        t2 = font.render("Estágio 1: CPU a 100%", True, (255, 255, 255))
+        screen.blit(t2, (30, 70))
+        pygame.display.flip()
+
+        # Checa eventos (permite sair com ESC ou fechar)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                stop_event.set()
+                for w in workers:
+                    w.terminate()
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                stop_event.set()
+                for w in workers:
+                    w.terminate()
+                pygame.quit()
+                sys.exit()
+
+    # Finaliza os processos de stress
+    stop_event.set()
+    for w in workers:
+        w.join(timeout=2)
+        if w.is_alive():
+            w.terminate()
+
+    print("[INFO] Estresse de CPU finalizado.")
+
 
 def video_playback():
     texto("Estágio 2: Reprodução de vídeo", center=True)
@@ -225,47 +301,57 @@ def video_playback():
         fps = 30  # fallback se não conseguir detectar
     frame_duration = 1.0 / fps
     print(f"[DEBUG] FPS detectado: {fps}")
-    # Inicializa leitura do uso de CPU
+
     cpu_percent = psutil.cpu_percent(interval=None)
-    cpu_history = [cpu_percent] * 10  # média móvel simples
+    cpu_history = [cpu_percent] * 10
     cpu_idx = 0
-    cpu_update_interval = 0.2  # segundos
+    cpu_update_interval = 0.2
     last_cpu_update = time.time()
+
     while time.time() - start_video < TEMPO_VIDEO:
         frame_start = time.time()
         ret, frame = cap.read()
         if not ret:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Loop o vídeo
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             continue
+
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (WIDTH, HEIGHT))
         surf = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
         screen.blit(surf, (0, 0))
-        # Atualiza CPU a cada cpu_update_interval
+
         now = time.time()
         if now - last_cpu_update > cpu_update_interval:
             cpu_percent = psutil.cpu_percent(interval=None)
             cpu_history[cpu_idx] = cpu_percent
             cpu_idx = (cpu_idx + 1) % len(cpu_history)
             last_cpu_update = now
+
         cpu_avg = sum(cpu_history) / len(cpu_history)
         cpu_log_video_global.append(cpu_avg)
         bateria = get_bateria()
+
+        # ✅ Coleta de logs corrigida
+        bat_log_video.append(bateria if bateria is not None else 0)
+        time_log_video.append(time.time() - start_time)
+
         legenda = f"CPU: {cpu_avg:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%"
         t = font.render(legenda, True, (255, 255, 0))
         screen.blit(t, (30, 30))
         pygame.display.flip()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 cap.release()
                 pygame.quit()
                 exit()
+
         elapsed = time.time() - frame_start
         if elapsed < frame_duration:
             time.sleep(frame_duration - elapsed)
+
     cap.release()
-
-
+    print(f"[DEBUG] Frames processados: {len(time_log_video)}  |  Logs de bateria: {len(bat_log_video)}")
 
 
 
@@ -280,15 +366,24 @@ def main():
             time.sleep(8)
             pygame.quit()
             sys.exit()
-        if not bateria.power_plugged and bateria.percent > 90:
+        if not bateria.power_plugged and bateria.percent > BATERIA_MINIMA:
             break
         msg = f"\n\n\n\n"
+        screen.fill((0,0,0))
         # Separa o msg em avrios textos menores para caber na tela
-        texto("Aguardando requisitos:", center=True)
-        texto(f"Bateria: {bateria.percent:.1f}%", center=True)
-        texto(f"Plugada: {'Sim' if bateria.power_plugged else 'Nao'}", center=True)
-        texto(f"A bateria deve estar acima de 90% e não pode estar carregando para iniciar o teste.", center=True)
+        t = font.render("Aguardando requisitos:", True, (255,255,255))
+        screen.blit(t, (30, 100))
+        t2 = font.render(f"- Bateria acima de {BATERIA_MINIMA}%", True, (255,255,0))
+        screen.blit(t2, (30, 150))
+        t3 = font.render("- Não estar carregando", True, (255,255,0))
+        screen.blit(t3, (30, 200))
+        bateriaatual = f"Bateria atual: {bateria.percent:.1f}%"
+        t4 = font.render(bateriaatual, True, (255, 255, 255))
+        screen.blit(t4, (30, 300))
+
         pygame.display.flip()
+
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -300,10 +395,13 @@ def main():
     texto("Teste concluído! Gerando gráfico...", center=True)
     pygame.display.flip()
     grafico_final()
+    texto("Teste finalizado! Pressione qualquer tecla para sair.", center=True)
     pygame.display.flip()
     time.sleep(5)
     pygame.quit()
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()  # Necessário para PyInstaller no Windows
     main()
+
