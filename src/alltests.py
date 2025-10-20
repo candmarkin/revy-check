@@ -1109,10 +1109,9 @@ def main():
         elif state == "DONE":
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
             log_data.append({"step": "TEST_STOP", "time": str(datetime.now()), "result": "APROVADO"})
-            SCREEN.fill((0, 200, 0))
+            save_log()
             draw_text(["Todos os testes concluídos!"], (0, 0, 0))
             pygame.display.flip()
-            save_log()
             time.sleep(2)
             running = False
             
@@ -1120,9 +1119,6 @@ def main():
         CLOCK.tick(10)
 
 def save_log():
-    global log_data
-    # remove duplicatas
-    log_data = list(set(tuple(d.items()) for d in log_data))  # Remove duplicatas mantendo formato de lista de dicionários
     # salva log no mysql e na tabela logs
     with open("checklist_log.json","w") as f:
         json.dump(log_data, f, indent=2)
