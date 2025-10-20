@@ -1110,7 +1110,7 @@ def main():
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
             log_data.append({"step": "TEST_STOP", "time": str(datetime.now()), "result": "APROVADO"})
             SCREEN.fill((0, 200, 0))
-            draw_text(["Todos os testes concluídos!"], (0, 255, 0))
+            draw_text(["Todos os testes concluídos!"], (0, 0, 0))
             pygame.display.flip()
             save_log()
             time.sleep(2)
