@@ -294,10 +294,17 @@ GREEN = (0, 200, 0)
 
 import mysql.connector
 
-def add_log(step, time, result="APROVADO"):
-    entry = {"step": step, "time": str(datetime.now()), "result": result}
-    if not any(e["step"] == step for e in log_data):
-        add_log(entry)
+def add_log(entry: dict):
+    """
+    Adiciona uma entrada ao log_data se ela ainda não existir (baseado em step e time).
+    Espera um dicionário no mesmo formato usado por log_data.append().
+    Exemplo:
+        add_log({"step": "TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
+    """
+    global log_data
+    # Evita duplicatas pelo campo 'step'
+    if not any(e.get("step") == entry.get("step") for e in log_data):
+        log_data.append(entry)
 
 def fetch_device_info():
 
