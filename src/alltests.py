@@ -294,18 +294,6 @@ GREEN = (0, 200, 0)
 
 import mysql.connector
 
-def add_log(entry: dict):
-    """
-    Adiciona uma entrada ao log_data se ela ainda não existir (baseado em step e time).
-    Espera um dicionário no mesmo formato usado por log_data.append().
-    Exemplo:
-        add_log({"step": "TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
-    """
-    global log_data
-    # Evita duplicatas pelo campo 'step'
-    if not any(e.get("step") == entry.get("step") for e in log_data):
-        log_data.append(entry)
-
 def fetch_device_info():
 
 
@@ -396,6 +384,12 @@ FREQUENCIES = [2000, 4000]
 
 # Log
 log_data = []
+
+def add_log(entry: dict):
+    if not any(e.get("step") == entry.get("step") for e in log_data):
+        log_data.append(entry)
+
+
 
 # ---------------- INIT PYGAME ---------------- #
 pygame.init()
@@ -1047,7 +1041,7 @@ def main():
         elif state == "USB_STEP" and step < len(PORT_MAP):
             bus, port_id, port_name = PORT_MAP[step]
             if not waiting_remove:
-                add_log({"step":f"USB_CONNECT_START_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":f"USB_CONNECT_TEST_START_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                 draw_text([f"Conecte o pendrive na {port_name}..."])
                 if port_has_device(bus, port_id):
                     waiting_remove = True
@@ -1055,7 +1049,7 @@ def main():
                     time.sleep(0.5)
             else:
                 draw_text([f"Remova o pendrive da {port_name}..."])
-                add_log({"step":f"USB_REMOVE_START{port_name}","time":str(datetime.now()), "result":"APROVADO"})
+                add_log({"step":f"USB_REMOVE_TEST_START{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                 if not port_has_device(bus, port_id):
                     step += 1
                     waiting_remove = False
@@ -1076,12 +1070,7 @@ def main():
 
         # ---------------- HEADPHONE ---------------- #
         elif state == "HEADPHONE_STEP":
-            # append 1 vez o step headphone test start no log data
-            isAppended = False
-            if not isAppended:
-                add_log({"step":"HEADPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
-                isAppended = True
-
+            add_log({"step":"HEADPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
             draw_text(["Conecte o headphone..."])
             if headphone_connected():
                 add_log({"step":"HEADPHONE_CONNECT","time":str(datetime.now()), "result":"APROVADO"})
