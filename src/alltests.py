@@ -358,7 +358,7 @@ def fetch_device_info():
 
 import ntplib
 
-def consulta_ntp(server='pool.ntp.org'):
+def consulta_ntp(server='pool.ntp.br'):
     client = ntplib.NTPClient()
     resp = client.request(server, version=3)
     try:

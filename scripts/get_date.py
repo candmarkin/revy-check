@@ -3,7 +3,7 @@ import time
 import os
 from datetime import datetime
 
-def consulta_ntp(server='pool.ntp.org'):
+def consulta_ntp(server='pool.ntp.br'):
     client = ntplib.NTPClient()
     resp = client.request(server, version=3)
     return resp.tx_time
