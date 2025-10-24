@@ -356,20 +356,19 @@ def fetch_device_info():
 
 
 
-config = fetch_device_info()
+import ntplib
 
-PORT_MAP = config["PORT_MAP"]
-VIDEO_PORTS = config["VIDEO_PORTS"]
-HAS_EMBEDDED_SCREEN = config["HAS_EMBEDDED_SCREEN"]
-HAS_EMBEDDED_KEYBOARD = config["HAS_EMBEDDED_KEYBOARD"]
-HAS_ETHERNET_PORT = config["HAS_ETHERNET_PORT"]
-ETH_INTERFACE = config["ETH_INTERFACE"]
-HAS_SPEAKER = config["HAS_SPEAKER"]
-HAS_HEADPHONE_JACK = config["HAS_HEADPHONE_JACK"]
-HAS_MICROPHONE = config["HAS_MICROPHONE"]
-
-
-print(VIDEO_PORTS)
+def consulta_ntp(server='pool.ntp.org'):
+    client = ntplib.NTPClient()
+    resp = client.request(server, version=3)
+    try:
+        ts = resp
+        formatted = time.strftime('%m%d%H%M%Y.%S', time.localtime(ts))
+        print("Hora obtida via NTP:", formatted)
+        os.system(f'sudo date {formatted}')
+    except Exception as e:
+        print("Erro ao consultar NTP:", e)
+    return resp.tx_time
 
 
 # Dev / Prod mode
@@ -385,11 +384,6 @@ FREQUENCIES = [2000, 4000]
 # Log
 log_data = []
 
-def add_log(entry: dict):
-    if not any(e.get("step") == entry.get("step") for e in log_data):
-        log_data.append(entry)
-
-
 
 # ---------------- INIT PYGAME ---------------- #
 pygame.init()
@@ -404,11 +398,52 @@ FONT = pygame.font.SysFont("Arial", 20)
 CLOCK = pygame.time.Clock()
 pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
 
+def wait_for_db_connection():
+    while True:
+        try:
+            conn = mysql.connector.connect(
+                host="revy.selbetti.com.br",
+                user="drack",
+                password="jdVg2dF2@",
+                database="revycheck"
+            )
+            conn.close()
+            return  # SUCESSO → sai do loop
+        except:
+            # Desenha tela de aviso
+            SCREEN.fill((0, 0, 0))
+            text = FONT.render("Conecte-se à rede corporativa", True, (255, 255, 255))
+            SCREEN.blit(text, ((WIDTH - text.get_width()) // 2, (HEIGHT - text.get_height()) // 2))
+            pygame.display.flip()
+
+            # Evita 100% CPU
+            CLOCK.tick(1)
+
+wait_for_db_connection()
 
 # ---------------- DEV HOTKEY ---------------- #
 DEV_HOTKEY = {pygame.K_LCTRL, pygame.K_LSHIFT, pygame.K_d, pygame.K_v} # conjunto de teclas
 
+config = fetch_device_info()
+consulta_ntp()
 
+PORT_MAP = config["PORT_MAP"]
+VIDEO_PORTS = config["VIDEO_PORTS"]
+HAS_EMBEDDED_SCREEN = config["HAS_EMBEDDED_SCREEN"]
+HAS_EMBEDDED_KEYBOARD = config["HAS_EMBEDDED_KEYBOARD"]
+HAS_ETHERNET_PORT = config["HAS_ETHERNET_PORT"]
+ETH_INTERFACE = config["ETH_INTERFACE"]
+HAS_SPEAKER = config["HAS_SPEAKER"]
+HAS_HEADPHONE_JACK = config["HAS_HEADPHONE_JACK"]
+HAS_MICROPHONE = config["HAS_MICROPHONE"]
+
+
+print(VIDEO_PORTS)
+
+
+def add_log(entry: dict):
+    if not any(e.get("step") == entry.get("step") for e in log_data):
+        log_data.append(entry)
 
 
 # DESATIVANDO ALT TAB
