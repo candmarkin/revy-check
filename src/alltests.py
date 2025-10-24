@@ -734,7 +734,6 @@ def keyboard_step():
                 pressed_keys.add(event.key)
                 already_pressed.append(event.key)
                 print(event.key)
-                # Verifica se todas as teclas do hotkey estão pressionadas
                 if DEV_HOTKEY.issubset(pressed_keys) and MODE=="PROD":
                     print("DEV MODE UNLOCKED via hotkey!")
                     MODE = "DEV"
@@ -804,7 +803,7 @@ def screen_step():
 
         if not test_done:
             SCREEN.fill(colors[color_index])
-            # Draw legend in top right corner
+
             legend_surface = legend_font.render(legend_text, True, (255, 255, 255))
             legend_rect = legend_surface.get_rect()
             legend_rect.topright = (WIDTH - 30, 20)
@@ -813,7 +812,7 @@ def screen_step():
 
         CLOCK.tick(60)
 
-    # Grava resultado no log
+
     result = "APROVADO" if approved else "REPROVADO"
     add_log({"step": "SCREEN_TEST", "time": str(datetime.now()), "result": result})
 
@@ -1004,7 +1003,7 @@ def main():
 
                 pressed_keys.add(event.key)
                 print(event.key)
-                # Verifica se todas as teclas do hotkey estão pressionadas
+
                 if DEV_HOTKEY.issubset(pressed_keys) and MODE=="PROD":
                     pswd = prompt_password()
                     if pswd == DEV_PASSWORD:
@@ -1115,6 +1114,7 @@ def main():
             draw_text(["Todos os testes concluídos! Salvando log..."], (0, 255, 0))
             add_log({"step": "TEST_STOP", "time": str(datetime.now()), "result": "APROVADO"})
             save_log()
+            SCREEN.fill(WHITE)
             draw_text(["Todos os testes concluídos!"], (0, 0, 0))
             pygame.display.flip()
             time.sleep(5)
@@ -1124,11 +1124,11 @@ def main():
         CLOCK.tick(10)
 
 def save_log():
-    # salva log no mysql e na tabela logs
+
     with open("checklist_log.json","w") as f:
         json.dump(log_data, f, indent=2)
 
-    # Salva no banco logs
+
     try:
         conn2 = mysql.connector.connect(
             host="revy.selbetti.com.br",
@@ -1137,7 +1137,7 @@ def save_log():
             database="revycheck"
         )
         cursor = conn2.cursor()
-        # Tenta obter serial do dispositivo
+
         try:
             device_serial = subprocess.check_output("cat /sys/class/dmi/id/product_serial", shell=True).strip().decode("utf-8")
         except Exception:
@@ -1145,7 +1145,7 @@ def save_log():
         for entry in log_data:
             step = entry.get("step", "")
             time_str = entry.get("time", None)
-            # tenta converter para datetime
+
             if time_str:
                 try:
                     time_val = datetime.fromisoformat(time_str)
@@ -1155,7 +1155,7 @@ def save_log():
                 time_val = datetime.now()
             approved = entry.get("result", "REPROVADO") == "APROVADO"
             print(f"Salvando log: {device_serial}, {step}, {time_val}, {approved}")
-            # Insere na tabela logs
+
             cursor.execute(
                 "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
                 (device_serial, step, time_val, approved)
