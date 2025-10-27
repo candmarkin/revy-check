@@ -365,7 +365,7 @@ def consulta_ntp(server='200.160.0.8'):
         ts = resp
         formatted = time.strftime('%m%d%H%M%Y.%S', time.localtime(ts))
         print("Hora obtida via NTP:", formatted)
-        os.system(f'sudo date {formatted}')
+        os.system(f'sudo date {formatted} -03')
     except Exception as e:
         print("Erro ao consultar NTP:", e)
     return resp.tx_time
