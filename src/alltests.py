@@ -1166,6 +1166,10 @@ def main():
             outputs, all_done = get_video_status()
             draw_video(outputs)
             if all_done:
+                # gera log para cada entrada de vídeo
+                for output in outputs:
+                    result = "APROVADO" if output["aprovado"] else "REPROVADO"
+                    add_log({"step":f"VIDEO_{output['name']}_TEST","time":str(datetime.now()), "result":result})
                 draw_text(["Video test ok!"], (0, 255, 0))
                 time.sleep(1)
                 state = "HEADPHONE_STEP" if HAS_HEADPHONE_JACK else "SPEAKER_STEP"
