@@ -535,25 +535,32 @@ def restore_alt_tab():
 def generate_tone(freq, duration=DURATION, channel="both"):
     t = np.linspace(0, duration, int(SAMPLE_RATE * duration), endpoint=False)
     wave = (np.sin(2 * np.pi * freq * t) * 32767).astype(np.int16)
+    
     if channel == "left":
         stereo_wave = np.column_stack((wave, np.zeros_like(wave)))
     elif channel == "right":
         stereo_wave = np.column_stack((np.zeros_like(wave), wave))
     else:
         stereo_wave = np.column_stack((wave, wave))
+    
     return pygame.sndarray.make_sound(stereo_wave)
+
+def play_tone(freq, channel="both"):
+    snd = generate_tone(freq, DURATION, channel)
+    snd.play()
+    pygame.time.wait(int(DURATION * 1000 + 50))
 
 def play_headphone_sequence():
     for freq in FREQUENCIES:
         draw_text([f"🔊 {freq} Hz - HEADPHONE ESQUERDA"])
-        generate_tone(freq, DURATION, "left").play()
-        time.sleep(DURATION + 0.2)
+        play_tone(freq, "left")
+
         draw_text([f"🔊 {freq} Hz - HEADPHONE DIREITA"])
-        generate_tone(freq, DURATION, "right").play()
-        time.sleep(DURATION + 0.2)
+        play_tone(freq, "right")
+
         draw_text([f"🔊 {freq} Hz - HEADPHONE AMBOS"])
-        generate_tone(freq, DURATION, "both").play()
-        time.sleep(DURATION + 0.5)
+        play_tone(freq, "both")
+
 
 def play_speaker_sequence():
     draw_text(["🔊 Teste de alto-falantes - sem headphone"])
@@ -595,12 +602,17 @@ def test_microphone_bip():
 
 # ---------------- PULSEAUDIO ---------------- #
 pulse = pulsectl.Pulse('headphone-monitor')
+
 def headphone_connected():
     for sink in pulse.sink_list():
-        port_name = sink.port_active.name.lower()
-        if 'headphone' in port_name or 'analog-output-headphones' in port_name:
-            return True
+        try:
+            port_name = sink.port_active.name.lower()
+            if 'headphone' in port_name or 'analog-output-headphones' in port_name:
+                return True
+        except Exception:
+            continue
     return False
+
 
 
 # ---------------- KEYBOARD ---------------- #
