@@ -95,6 +95,8 @@ def cadastro_portas():
 
     root = tk.Tk()
     root.withdraw()
+    root.focus_force()
+    root.update()
 
     messagebox.showinfo("Banco de Dados", "Antes de iniciar, vamos conectar ao banco MySQL.\n\nSe a rede não estiver ativa, conecte e clique em Tentar novamente.")
 
