@@ -14,6 +14,6 @@ if __name__ == "__main__":
         dt = datetime.fromtimestamp(ts)
         formatted = time.strftime('%m%d%H%M%Y.%S', time.localtime(ts))
         print("Hora obtida via NTP:", formatted)
-        os.system(f'sudo date {formatted}')
+        os.system(f'sudo date {formatted} -03')
     except Exception as e:
         print("Erro ao consultar NTP:", e)
