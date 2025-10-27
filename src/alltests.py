@@ -27,30 +27,25 @@ def ask_text(prompt):
     import tkinter as tk
     from tkinter import simpledialog
 
-    # Janela oculta base
     root = tk.Tk()
     root.withdraw()
 
-    # Criar diálogo manualmente para garantir foco e captura de input
     dialog = tk.Toplevel(root)
     dialog.title("Entrada")
     dialog.geometry("450x150")
     dialog.resizable(False, False)
 
-    # Faz o diálogo ficar sempre no topo e receber foco
     dialog.attributes("-topmost", True)
     dialog.lift()
     dialog.focus_force()
-    dialog.grab_set()   # bloqueia clique fora
+    dialog.grab_set()
 
-    # Label
     label = tk.Label(dialog, text=prompt, anchor="w", justify="left", wraplength=430)
     label.pack(pady=(10, 5), padx=10)
 
-    # Campo de texto
     entry = tk.Entry(dialog, width=45, font=("DejaVu Sans", 12))
     entry.pack(pady=5)
-    entry.focus_set()  # força cursor dentro do input
+    entry.focus_set()
 
     result = None
 
@@ -64,18 +59,15 @@ def ask_text(prompt):
         result = ""
         dialog.destroy()
 
-    # Botões
     btn_frame = tk.Frame(dialog)
     btn_frame.pack(pady=10)
 
     tk.Button(btn_frame, text="OK", width=10, command=confirm).pack(side="left", padx=5)
     tk.Button(btn_frame, text="Cancelar", width=10, command=cancel).pack(side="left", padx=5)
 
-    # Enter confirma, Esc cancela
     dialog.bind("<Return>", lambda e: confirm())
     dialog.bind("<Escape>", lambda e: cancel())
 
-    # Loop modal (igual askstring, mas com foco garantido)
     dialog.wait_window()
 
     root.destroy()
