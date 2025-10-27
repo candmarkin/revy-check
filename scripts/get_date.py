@@ -1,7 +1,10 @@
 import ntplib
 import time
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# Fuso horário Brasil (UTC-3)
+BR_TZ = timezone(timedelta(hours=-3))
 
 def consulta_ntp(server='200.160.0.8'):
     client = ntplib.NTPClient()
@@ -11,9 +14,9 @@ def consulta_ntp(server='200.160.0.8'):
 if __name__ == "__main__":
     try:
         ts = consulta_ntp()
-        dt = datetime.fromtimestamp(ts)
-        formatted = time.strftime('%m%d%H%M%Y.%S', time.localtime(ts))
-        print("Hora obtida via NTP:", formatted)
-        os.system(f'sudo date {formatted} -03')
+        dt = datetime.fromtimestamp(ts, timezone.utc).astimezone(BR_TZ)
+        formatted = dt.strftime('%m%d%H%M%Y.%S')
+        print("Hora obtida via NTP (Brasil UTC-3):", dt.strftime('%Y-%m-%d %H:%M:%S'))
+        os.system(f"sudo date {formatted}")
     except Exception as e:
         print("Erro ao consultar NTP:", e)

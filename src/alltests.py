@@ -357,18 +357,24 @@ def fetch_device_info():
 
 
 import ntplib
+from datetime import timezone, timedelta
+
+BR_TZ = timezone(timedelta(hours=-3))
 
 def consulta_ntp(server='200.160.0.8'):
-    client = ntplib.NTPClient()
-    resp = client.request(server, version=3)
     try:
-        ts = resp
-        formatted = time.strftime('%m%d%H%M%Y.%S', time.localtime(ts))
-        print("Hora obtida via NTP:", formatted)
-        os.system(f'sudo date {formatted} -03')
+        client = ntplib.NTPClient()
+        resp = client.request(server, version=3)
+        ts = resp.tx_time
+        dt_brasil = datetime.fromtimestamp(ts, timezone.utc).astimezone(BR_TZ)
+        formatted = dt_brasil.strftime('%m%d%H%M%Y.%S')
+        print("Hora obtida via NTP (Brasil UTC-3):", dt_brasil.strftime('%Y-%m-%d %H:%M:%S'))
+        os.system(f"sudo date {formatted}")
+        return ts
+
     except Exception as e:
         print("Erro ao consultar NTP:", e)
-    return resp.tx_time
+        return None
 
 
 # Dev / Prod mode
