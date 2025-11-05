@@ -1215,6 +1215,17 @@ def main():
             if not waiting_remove:
                 add_log({"step":f"USB_CONNECT_TEST_START_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
                 draw_text([f"Conecte o pendrive na {port_name}..."])
+                # se for dev, mostra o lsusb -t em tempo real
+                if MODE == "DEV":
+                    lsusb_output = subprocess.check_output(["lsusb", "-t"], text=True)
+                    dev_font = pygame.font.SysFont("Consolas", 12)
+                    y = HEIGHT // 2 + 50
+                    for line in lsusb_output.splitlines():
+                        text_surf = dev_font.render(line, True, (0, 255, 0))
+                        SCREEN.blit(text_surf, (50, y))
+                        y += 20
+                    pygame.display.flip()
+
                 if port_has_device(bus, port_id):
                     waiting_remove = True
                     add_log({"step":f"USB_CONNECT_{port_name}","time":str(datetime.now()), "result":"APROVADO"})
