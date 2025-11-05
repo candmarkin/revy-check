@@ -456,26 +456,43 @@ FONT = pygame.font.SysFont("Arial", 20)
 CLOCK = pygame.time.Clock()
 pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
 
-def wait_for_db_connection():
-    while True:
-        try:
-            conn = mysql.connector.connect(
-                host="revy.selbetti.com.br",
-                user="drack",
-                password="jdVg2dF2@",
-                database="revycheck"
-            )
-            conn.close()
-            return  # SUCESSO → sai do loop
-        except:
-            # Desenha tela de aviso
-            SCREEN.fill((0, 0, 0))
-            text = FONT.render("Conecte-se à rede corporativa", True, (255, 255, 255))
-            SCREEN.blit(text, ((WIDTH - text.get_width()) // 2, (HEIGHT - text.get_height()) // 2))
-            pygame.display.flip()
 
-            # Evita 100% CPU
-            CLOCK.tick(1)
+
+def wait_for_db_connection():
+    try:
+        conn = mysql.connector.connect(
+            host="revy.selbetti.com.br",
+            user="drack",
+            password="jdVg2dF2@",
+            database="revycheck"
+        )
+        conn.close()
+        has_conn = True
+    except:
+        has_conn = False
+        
+    if has_conn:
+        return
+    else:
+        while not has_conn:
+            try:
+                conn = mysql.connector.connect(
+                    host="revy.selbetti.com.br",
+                    user="drack",
+                    password="jdVg2dF2@",
+                    database="revycheck"
+                )
+                conn.close()
+                has_conn = True
+                pygame.quit()
+                sys.exit(0)
+            except:
+                SCREEN.fill((0, 0, 0))
+                text = FONT.render("Conecte-se à rede corporativa", True, (255, 255, 255))
+                SCREEN.blit(text, ((WIDTH - text.get_width()) // 2, (HEIGHT - text.get_height()) // 2))
+                pygame.display.flip()
+                has_conn = False
+
 
 wait_for_db_connection()
 
