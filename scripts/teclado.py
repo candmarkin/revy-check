@@ -15,3 +15,6 @@ def main():
                 print(f"Tecla pressionada: {event.key} (Keycode: {pygame.key.name(event.key)})")
 
     pygame.quit()
+
+if __name__ == "__main__":
+    main()
