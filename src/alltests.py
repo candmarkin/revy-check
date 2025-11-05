@@ -1284,11 +1284,59 @@ def main():
         CLOCK.tick(10)
 
 def save_log():
-
-    with open("checklist_log.json","w") as f:
+    # --- 1) Salvar o log em arquivo local ---
+    with open("checklist_log.json", "w") as f:
         json.dump(log_data, f, indent=2)
 
+    # --- 2) Mostrar log na tela ---
+    SCREEN.fill((255, 255, 255))
+    FONT_SMALL = pygame.font.SysFont("Consolas", 10)
+    FONT_BIG = pygame.font.SysFont("Arial", 14, bold=True)
 
+    y = 50
+    SCREEN.blit(FONT_BIG.render("Pré-visualização do log:", True, (0, 0, 0)), (50, y))
+    y += 40
+
+    for entry in log_data[-15:]:  # Mostra as últimas 15 entradas (pra não estourar a tela)
+        text = f"{entry.get('step', '?')} | {entry.get('result', '?')} | {entry.get('time', '')}"
+        SCREEN.blit(FONT_SMALL.render(text, True, (0, 0, 0)), (60, y))
+        y += 25
+        if y > HEIGHT - 120:
+            SCREEN.blit(FONT_SMALL.render("... (log truncado) ...", True, (150, 0, 0)), (60, y))
+            break
+
+    # Botões
+    send_btn = pygame.Rect(WIDTH//2 - 160, HEIGHT - 80, 140, 50)
+    cancel_btn = pygame.Rect(WIDTH//2 + 20, HEIGHT - 80, 140, 50)
+    pygame.draw.rect(SCREEN, (0, 200, 0), send_btn, border_radius=10)
+    pygame.draw.rect(SCREEN, (200, 0, 0), cancel_btn, border_radius=10)
+    SCREEN.blit(FONT_BIG.render("Enviar", True, (255, 255, 255)), send_btn.move(25, 10))
+    SCREEN.blit(FONT_BIG.render("Cancelar", True, (255, 255, 255)), cancel_btn.move(10, 10))
+    pygame.display.flip()
+
+    # --- 3) Esperar ação do usuário ---
+    decision = None
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if send_btn.collidepoint(event.pos):
+                    decision = "enviar"
+                    waiting = False
+                elif cancel_btn.collidepoint(event.pos):
+                    decision = "cancelar"
+                    waiting = False
+        CLOCK.tick(30)
+
+    if decision == "cancelar":
+        draw_text(["❌ Envio cancelado pelo usuário."], (200, 0, 0))
+        time.sleep(2)
+        return "Envio cancelado"
+
+    # --- 4) Enviar ao banco ---
     try:
         conn2 = mysql.connector.connect(
             host="revy.selbetti.com.br",
@@ -1299,13 +1347,15 @@ def save_log():
         cursor = conn2.cursor()
 
         try:
-            device_serial = subprocess.check_output("cat /sys/class/dmi/id/product_serial", shell=True).strip().decode("utf-8")
+            device_serial = subprocess.check_output(
+                "cat /sys/class/dmi/id/product_serial", shell=True
+            ).strip().decode("utf-8")
         except Exception:
             device_serial = "unknown"
+
         for entry in log_data:
             step = entry.get("step", "")
             time_str = entry.get("time", None)
-
             if time_str:
                 try:
                     time_val = datetime.fromisoformat(time_str)
@@ -1314,18 +1364,31 @@ def save_log():
             else:
                 time_val = datetime.now()
             approved = entry.get("result", "REPROVADO") == "APROVADO"
-            print(f"Salvando log: {device_serial}, {step}, {time_val}, {approved}")
 
             cursor.execute(
                 "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
                 (device_serial, step, time_val, approved)
             )
+
         conn2.commit()
         cursor.close()
         conn2.close()
+        draw_text(["✅ Log salvo com sucesso!"], (0, 180, 0))
+        time.sleep(2)
         return "Log salvo com sucesso!"
+
     except Exception as e:
-        return f"Erro ao salvar log no banco: {e}"
+        color = (255, 0, 0)
+        if "MODE" in globals() and MODE == "DEV":
+            msg = f"Erro ao salvar log no BD:\n{e}"
+        else:
+            msg = "Erro ao salvar log no BD!"
+        SCREEN.fill((255, 255, 255))
+        draw_text([msg], color)
+        pygame.display.flip()
+        time.sleep(3)
+        return str(e)
+
 
 
 if __name__ == "__main__":
