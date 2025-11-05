@@ -1048,29 +1048,62 @@ def prompt_password():
 # ---------------- MAIN ---------------- #
 
 def start_step():
-    button_rect = pygame.Rect(WIDTH//2 - 150, HEIGHT//2 + 40, 300, 70)
     waiting = True
+    selected_option = None
+
+    # Lista de opções
+    options = [
+        "QUALIDADE",
+        "VISTORIA1",
+        "VISTORIA2",
+        "VISTORIA3",
+        "VISTORIA4"
+    ]
+
+    # Criação dinâmica dos botões
+    button_rects = []
+    start_y = HEIGHT // 2 - len(options) * 50 // 2
+    for i, opt in enumerate(options):
+        rect = pygame.Rect(WIDTH//2 - 150, start_y + i * 80, 300, 60)
+        button_rects.append((opt, rect))
+
     while waiting:
         SCREEN.fill((30, 30, 30))
-        # Mensagem de boas-vindas
-        title = FONT.render("Bem-vindo ao RevyCheck", True, (255, 255, 255))
-        SCREEN.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//2 - 60))
-        # Botão
-        pygame.draw.rect(SCREEN, (0, 180, 0), button_rect, border_radius=12)
-        btn_text = FONT.render("Iniciar testes", True, (255,255,255))
-        SCREEN.blit(btn_text, (button_rect.centerx - btn_text.get_width()//2, button_rect.centery - btn_text.get_height()//2))
+
+        # Título
+        title = FONT.render("Selecione o tipo de teste", True, (255, 255, 255))
+        SCREEN.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//4))
+
+        # Renderiza os botões
+        mouse_pos = pygame.mouse.get_pos()
+        for opt, rect in button_rects:
+            # Efeito hover
+            color = (0, 200, 0) if rect.collidepoint(mouse_pos) else (0, 150, 0)
+            pygame.draw.rect(SCREEN, color, rect, border_radius=12)
+            text = FONT.render(opt, True, (255, 255, 255))
+            SCREEN.blit(text, (rect.centerx - text.get_width()//2, rect.centery - text.get_height()//2))
+
         pygame.display.flip()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if button_rect.collidepoint(event.pos):
-                    waiting = False
+                for opt, rect in button_rects:
+                    if rect.collidepoint(event.pos):
+                        selected_option = opt
+                        log_data = {
+                            "step": f"TEST_START_{selected_option.upper().replace(' ', '_')}",
+                            "time": str(datetime.now()),
+                            "result": "APROVADO"
+                        }
+                        add_log(log_data)
+                        waiting = False
+
         CLOCK.tick(30)
 
 def main():
@@ -1123,7 +1156,6 @@ def main():
         # ---------------- START ---------------- #
         if state == "START_STEP":
             start_step()
-            add_log({"step":"TEST_START","time":str(datetime.now()), "result":"APROVADO"})
             state = "SCREEN_STEP"
             continue
 

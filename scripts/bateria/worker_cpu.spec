@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['scripts\\bateria2.py'],
+    ['worker_cpu.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='bateria2',
+    name='worker_cpu',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

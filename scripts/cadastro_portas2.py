@@ -10,7 +10,7 @@ from mysql.connector import Error
 def has_pendrive_connected_cd():
     try:
         outputA = subprocess.check_output(["lsusb", "-t"], text=True)
-        return "Class=Mass Storage" in str(outputA)
+        return "Class=Mass Storage" in str(outputA) and "Bus 001.Port 001" in str(outputA)
     except Exception:
         return False
 
@@ -211,7 +211,7 @@ def cadastro_portas():
             output = subprocess.check_output(["lsusb", "-t"], text=True)
             for bus_string in output.split("/:"):
                 for line in bus_string.splitlines():
-                    if "Class=Mass Storage" in line:
+                    if "Class=Mass Storage" in line and "Bus 001.Port 001" in line:
                         # tenta quebrar a linha para obter id/porta
                         try:
                             part = line.split(":")[0]
