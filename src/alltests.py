@@ -826,21 +826,28 @@ def draw_kb_unlock_button():
 def keyboard_step():
     global MODE
     running = True
+    last_key_info = ""  # armazena a última tecla pressionada
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                if MODE=="DEV":
+                if MODE == "DEV":
                     save_log()
                     pygame.quit()
                     sys.exit()
-                
+
             elif event.type == pygame.KEYDOWN:
                 pressed_keys.add(event.key)
                 already_pressed.append(event.key)
-                print(event.key)
-                if DEV_HOTKEY.issubset(pressed_keys) and MODE=="PROD":
+                key_name = pygame.key.name(event.key)
+                last_key_info = f"Tecla: {key_name} | Código: {event.key}"
+                print(last_key_info)
+                
+                # Hotkey secreta para DEV
+                if DEV_HOTKEY.issubset(pressed_keys) and MODE == "PROD":
                     print("DEV MODE UNLOCKED via hotkey!")
                     MODE = "DEV"
+
             elif event.type == pygame.KEYUP:
                 if event.key in pressed_keys:
                     pressed_keys.remove(event.key)
@@ -848,12 +855,19 @@ def keyboard_step():
         SCREEN.fill((240, 240, 240))
         draw_keyboard()
         unlocked = draw_kb_unlock_button()
+
+        # --- Mostrar tecla pressionada no modo DEV ---
+        if MODE == "DEV" and last_key_info:
+            dev_font = pygame.font.SysFont("Consolas", 22)
+            text_surf = dev_font.render(last_key_info, True, (0, 100, 255))
+            SCREEN.blit(text_surf, (20, 20))
+
         pygame.display.flip()
         CLOCK.tick(60)
 
         if unlocked:
             draw_text(["✅ Teste de teclado concluído!"], (0, 255, 0))
-            add_log({"step":"KEYBOARD_TEST","time":str(datetime.now()), "result":"APROVADO"})
+            add_log({"step": "KEYBOARD_TEST", "time": str(datetime.now()), "result": "APROVADO"})
             time.sleep(1)
             running = False
 
