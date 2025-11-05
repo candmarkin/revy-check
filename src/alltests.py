@@ -394,6 +394,7 @@ def fetch_device_info():
 
     
     return {
+        "MANUFACTURER": manufacturer,
         "PRODUCT_NAME": productname,
         "PORT_MAP": port_map,
         "VIDEO_PORTS": video_ports,
@@ -502,6 +503,7 @@ DEV_HOTKEY = {pygame.K_LCTRL, pygame.K_LSHIFT, pygame.K_d, pygame.K_v} # conjunt
 config = fetch_device_info()
 consulta_ntp()
 
+MANUFACTURER = config["MANUFACTURER"]
 PRODUCT_NAME = config["PRODUCT_NAME"]
 PORT_MAP = config["PORT_MAP"]
 VIDEO_PORTS = config["VIDEO_PORTS"]
@@ -843,7 +845,7 @@ def draw_kb_unlock_button():
     return unlocked
 
 def keyboard_step():
-    global MODE, PRODUCT
+    global MODE, MANUFACTURER, PRODUCT_NAME
     running = True
     last_key_info = ""  # armazena a última tecla pressionada
 
@@ -856,7 +858,7 @@ def keyboard_step():
                     sys.exit()
 
             elif event.type == pygame.KEYDOWN:
-                if PRODUCT_NAME == "ThinkPad T480":
+                if MANUFACTURER == "LENOVO":
                     if event.key == 1073742052: #Barra do lenovo
                         pressed_keys.add(pygame.K_SLASH)
                         already_pressed.append(pygame.K_SLASH)
