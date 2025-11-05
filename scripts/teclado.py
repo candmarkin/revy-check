@@ -1,20 +1,22 @@
-# pygame que mostra o codigo das teclas pressionadas
+#!/usr/bin/env python3
 import pygame
+import sys
 
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode((400, 300))
-    pygame.display.set_caption("Teclado Keycode Viewer")
+# Inicializa o Pygame sem mostrar janela
+pygame.display.init()
+pygame.display.set_mode((1, 1), pygame.HIDDEN)
+pygame.key.set_repeat(1, 50)
 
-    running = True
-    while running:
+print("Pressione qualquer tecla (Ctrl+C para sair):")
+
+try:
+    while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                print(f"Tecla pressionada: {event.key} (Keycode: {pygame.key.name(event.key)})")
-
+            if event.type == pygame.KEYDOWN:
+                print(f"Tecla pressionada: {pygame.key.name(event.key)} (código: {event.key})")
+            elif event.type == pygame.KEYUP:
+                print(f"Tecla liberada: {pygame.key.name(event.key)} (código: {event.key})")
+except KeyboardInterrupt:
+    print("\nEncerrando...")
     pygame.quit()
-
-if __name__ == "__main__":
-    main()
+    sys.exit(0)
