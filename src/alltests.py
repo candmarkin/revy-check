@@ -264,8 +264,9 @@ def cadastro_portas():
         try:
             output = subprocess.check_output(["lsusb", "-t"], text=True)
             for bus_string in output.split("/:"):
-                for line in bus_string.splitlines():
-                    if "Class=Mass Storage" in line:
+                bus_list = bus_string.splitlines()
+                for line in bus_list:
+                    if "Class=Mass Storage" in line and not "Bus 002.Port 001" in bus_list[bus_list.index(line) - 1]:
                         # tenta quebrar a linha para obter id/porta
                         try:
                             part = line.split(":")[0]
@@ -282,10 +283,10 @@ def cadastro_portas():
                             PORT_MAP.append({"bus": bus, "port": f"Port {port_id}:", "label": new_port})
                             wait_for_ok("Porta cadastrada com sucesso!\n\nRemova todos os pendrives conectados...")
             # espera remoção do pendrive
-            temusb = has_pendrive_connected_cd()
-            while temusb:
-                time.sleep(1)
-                temusb = has_pendrive_connected_cd()
+            # temusb = has_pendrive_connected_cd()
+            # while temusb:
+            #     time.sleep(1)
+            #     temusb = has_pendrive_connected_cd()
 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao executar lsusb: {e}")
