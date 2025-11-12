@@ -7,7 +7,9 @@ import psutil
 import time
 import sys
 import os
+import re
 import cv2
+import subprocess
 import ctypes
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -310,6 +312,16 @@ def grafico_final():
     relatorio_json["porcentagem_final"] = psutil.sensors_battery().percent if psutil.sensors_battery() else None
 
 
+    # Obtém capacidade da bateria
+    bateria = get_battery_capacity()
+    relatorio += ["", "--- Capacidade da Bateria ---",
+                  f"Capacidade de projeto: {bateria['design_capacity_mWh']} mWh",
+                  f"Capacidade de carga completa: {bateria['full_capacity_mWh']} mWh",
+                  f"Saúde da bateria: {bateria['battery_health_percent']}%"]    
+    relatorio_json["battery_capacity"] = bateria
+
+
+
     msg = font.render("Enviando resultado...", True, (255, 255, 255))
     rect = msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     screen.blit(msg, rect)
@@ -345,6 +357,36 @@ def grafico_final():
         time.sleep(0.1)
 
 
+def get_battery_capacity():
+    report_path = os.path.expanduser("C:\\Temp\\battery-report.html")
+
+    # Gera o relatório
+    subprocess.run(["powercfg", "/batteryreport", "/output", report_path], check=True, shell=True)
+
+    # Lê o conteúdo do relatório
+    with open(report_path, "r", encoding="utf-8", errors="ignore") as f:
+        html_content = f.read()
+
+    # Expressões regulares para capturar as capacidades
+    design_match = re.search(r"DESIGN CAPACITY\s*([\d,]+)\s*mWh", html_content, re.IGNORECASE)
+    full_match = re.search(r"FULL CHARGE CAPACITY\s*([\d,]+)\s*mWh", html_content, re.IGNORECASE)
+
+    if not design_match or not full_match:
+        raise ValueError("Não foi possível localizar as informações de capacidade no relatório.")
+
+    # Converte para número inteiro (remove vírgula e espaços)
+    design_capacity = int(design_match.group(1).replace(",", ""))
+    full_capacity = int(full_match.group(1).replace(",", ""))
+
+    # Calcula a saúde da bateria em %
+    battery_health = round((full_capacity / design_capacity) * 100, 2)
+
+    #  adiciona ao relatório
+    return {
+        "design_capacity_mWh": design_capacity,
+        "full_capacity_mWh": full_capacity,
+        "battery_health_percent": battery_health
+    }
 
 # --- Função principal ---
 def main():
@@ -377,7 +419,6 @@ def main():
     cpu_stress()
     video_playback()
     texto("Teste concluído! Gerando gráfico...", center=True)
-    pygame.display.flip()
     grafico_final()
     time.sleep(5)
     pygame.quit()

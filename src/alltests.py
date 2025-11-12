@@ -859,9 +859,11 @@ def keyboard_step():
 
             elif event.type == pygame.KEYDOWN:
                 if MANUFACTURER == "LENOVO":
-                    if event.key == 1073742052: #Barra do lenovo
+                    if event.key == 1073742052: # Tecla / do lenovo
                         pressed_keys.add(pygame.K_SLASH)
                         already_pressed.append(pygame.K_SLASH)
+
+                
                 pressed_keys.add(event.key)
                 already_pressed.append(event.key)
                 key_name = pygame.key.name(event.key)
