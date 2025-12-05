@@ -1095,7 +1095,8 @@ def start_step():
 
     # Lista de opções
     options = [
-        "QUALIDADE",
+        "QUALIDADE1",
+        "QUALIDADE2",
         "VISTORIA1",
         "VISTORIA2",
         "VISTORIA3",

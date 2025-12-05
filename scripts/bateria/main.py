@@ -12,16 +12,15 @@ import cv2
 import subprocess
 import ctypes
 import multiprocessing
-import matplotlib.pyplot as plt
 
 if getattr(sys, 'frozen', False):
     multiprocessing.set_executable(sys.executable)
 
 # --- CONFIGURAÇÃO ---
 API_URL = "http://revy.selbetti.com.br:8000/relatoriorevycheck"
-TEMPO_CPU = 300  # segundos
-TEMPO_VIDEO = 300  # segundos
-BATERIA_MINIMA = 90
+TEMPO_CPU = 20  # segundos
+TEMPO_VIDEO = 20  # segundos
+BATERIA_MINIMA = 10
 
 
 # Caminho do vídeo
@@ -56,11 +55,13 @@ start_time = time.time()
 
 
 # --- Funções auxiliares ---
-def texto(msg, y=200, center=False):
+def texto(msg, y, fontsize=24, center=False):
+
+    font = pygame.font.SysFont("Arial", fontsize)
     screen.fill((0, 0, 0))
     t = font.render(msg, True, (255, 255, 255))
     if center:
-        rect = t.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        rect = t.get_rect(center=(WIDTH // 2, HEIGHT // 2 if not y else y))
     else:
         rect = t.get_rect(topleft=(50, y))
     screen.blit(t, rect)
@@ -78,7 +79,7 @@ def get_bateria():
 
 # --- TESTE DE STRESS DE CPU (versão sem janelas extras) ---
 def cpu_stress():
-    texto("Estágio 1: CPU a 100%", center=True)
+    texto("Estágio 1: CPU a 100%", center=True, y=HEIGHT//2)
     pygame.display.flip()
     end = time.time() + TEMPO_CPU
 
@@ -89,6 +90,8 @@ def cpu_stress():
     # Caminho para o worker (deve estar no mesmo diretório do executável)
     worker_path = os.path.join(os.path.dirname(sys.executable), "worker_cpu.exe")
 
+
+    print(worker_path)
     # Cria spos externos invisíveis
     workers = [
         sp.Popen([worker_path, str(TEMPO_CPU)], stdout=sp.DEVNULL, stderr=sp.DEVNULL)
@@ -103,7 +106,8 @@ def cpu_stress():
         bat_log_cpu.append(bateria if bateria is not None else 0)
         time_log_cpu.append(time.time() - start_time)
 
-        legenda = f"CPU: {cpu_usage:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%"
+        elapsed = int(time.time() - (end - TEMPO_CPU))
+        legenda = f"CPU: {cpu_usage:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%  |  Tempo: {elapsed}s"
         screen.fill((0, 0, 0))
         t = font.render(legenda, True, (255, 255, 0))
         screen.blit(t, (30, 30))
@@ -135,12 +139,12 @@ def cpu_stress():
 
 # --- (Restante do seu código continua igual) ---
 def video_playback():
-    texto("Estágio 2: Reprodução de vídeo", center=True)
+    texto("Estágio 2: Reprodução de vídeo", center=True, y=HEIGHT//2)
     pygame.display.flip()
     cap = cv2.VideoCapture(VIDEO_PATH)
     time.sleep(1)
     if not cap.isOpened():
-        texto(f"Erro ao abrir o vídeo:\n{VIDEO_PATH}", center=True)
+        texto(f"Erro ao abrir o vídeo:\n{VIDEO_PATH}", center=True, y=HEIGHT//2)
         pygame.display.flip()
         time.sleep(5)
         return
@@ -177,7 +181,8 @@ def video_playback():
         bat_log_video.append(bateria if bateria is not None else 0)
         time_log_video.append(time.time() - start_time)
 
-        legenda = f"CPU: {cpu_avg:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%"
+        elapsed = int(time.time() - start_video)
+        legenda = f"CPU: {cpu_avg:.1f}%  |  Bateria: {bateria if bateria is not None else '-'}%  |  Tempo: {elapsed}s"
         t = font.render(legenda, True, (255, 255, 0))
         screen.blit(t, (30, 30))
         pygame.display.flip()
@@ -249,19 +254,6 @@ def grafico_final():
             "estimativa_horas": tempo_estimado_cpu / 3600
         }
 
-        # Gera gráfico da bateria (CPU)
-        plt.figure()
-        plt.plot(time_log_cpu, bat_log_cpu, color="red", linewidth=2)
-        plt.title("Variação da Bateria - Teste CPU 100%")
-        plt.xlabel("Tempo (s)")
-        plt.ylabel("Nível da bateria (%)")
-        plt.grid(True)
-        plt.tight_layout()
-        cpu_plot_path = os.path.join(os.getcwd(), f"grafico_cpu_{serial or 'semserial'}.png")
-        plt.savefig(cpu_plot_path)
-        plt.close()
-        print(f"[INFO] Gráfico CPU salvo em {cpu_plot_path}")
-
     else:
         relatorio += ["--- 100% CPU ---", "Dados insuficientes.", ""]
         relatorio_json["cpu_stress"] = None
@@ -289,19 +281,6 @@ def grafico_final():
             "cpu_medio": cpu_media_video
         }
 
-        # Gera gráfico da bateria (vídeo)
-        plt.figure()
-        plt.plot(time_log_video, bat_log_video, color="blue", linewidth=2)
-        plt.title("Variação da Bateria - Playback de Vídeo")
-        plt.xlabel("Tempo (s)")
-        plt.ylabel("Nível da bateria (%)")
-        plt.grid(True)
-        plt.tight_layout()
-        video_plot_path = os.path.join(os.getcwd(), f"grafico_video_{serial or 'semserial'}.png")
-        plt.savefig(video_plot_path)
-        plt.close()
-        print(f"[INFO] Gráfico Vídeo salvo em {video_plot_path}")
-
     else:
         relatorio += ["--- Playback de Vídeo ---", "Dados insuficientes."]
         relatorio_json["video_playback"] = None
@@ -315,46 +294,20 @@ def grafico_final():
     # Obtém capacidade da bateria
     bateria = get_battery_capacity()
     relatorio += ["", "--- Capacidade da Bateria ---",
-                  f"Capacidade de projeto: {bateria['design_capacity_mWh']} mWh",
-                  f"Capacidade de carga completa: {bateria['full_capacity_mWh']} mWh",
+                  f"Capacidade máxima original: {bateria['design_capacity_mWh']} mWh",
+                  f"Capacidade máxima atual: {bateria['full_capacity_mWh']} mWh",
                   f"Saúde da bateria: {bateria['battery_health_percent']}%"]    
     relatorio_json["battery_capacity"] = bateria
-
-
-
-    msg = font.render("Enviando resultado...", True, (255, 255, 255))
-    rect = msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-    screen.blit(msg, rect)
-    pygame.display.flip()
 
     # Envia o relatório
     try:
         headers = {"Content-Type": "application/json"}
-        response = requests.post(API_URL, data=json.dumps(relatorio_json), headers=headers, timeout=5)
-        print(f"[API] Status: {response.status_code} - {response.text}")
+        response = requests.post(API_URL, data=json.dumps(relatorio_json), headers=headers, timeout=20)
+        # salva pdf localmente no C:\\Temp
+        with open("C:\\Temp\\relatorio_revycheck.pdf", "wb") as f:
+            f.write(response.content)
     except Exception as e:
         print(f"[API] Falha ao enviar relatório: {e}")
-
-    # Mostra resultados no pygame
-    pygame.event.clear()
-    screen.fill((0, 200, 0))
-    y = 60
-    for linha in relatorio:
-        t = font.render(linha, True, (255, 255, 255))
-        rect = t.get_rect(center=(WIDTH // 2, y))
-        screen.blit(t, rect)
-        y += 50
-        pygame.display.flip()
-        time.sleep(0.3)
-
-    # Aguarda o usuário pressionar uma tecla
-    esperando = True
-    while esperando:
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    esperando = False
-        time.sleep(0.1)
 
 
 def get_battery_capacity():
@@ -367,25 +320,18 @@ def get_battery_capacity():
     with open(report_path, "r", encoding="utf-8", errors="ignore") as f:
         html_content = f.read()
 
-    # Expressões regulares para capturar as capacidades
-    design_match = re.search(r"DESIGN CAPACITY\s*([\d,]+)\s*mWh", html_content, re.IGNORECASE)
-    full_match = re.search(r"FULL CHARGE CAPACITY\s*([\d,]+)\s*mWh", html_content, re.IGNORECASE)
+    # Encontra as capacidade lendoi a tabelas no HTML
+    design_match = re.search(r"DESIGN CAPACITY</span><\/td><td>([\d.,]+)\s*mWh", html_content, re.IGNORECASE)
+    full_match = re.search(r"FULL CHARGE CAPACITY</span><\/td><td>([\d.,]+)\s*mWh", html_content, re.IGNORECASE)
 
-    if not design_match or not full_match:
-        raise ValueError("Não foi possível localizar as informações de capacidade no relatório.")
+    design_capacity = float(design_match.group(1).replace(".", "").replace(",", "."))  # trata 68.005 -> 68005
+    full_capacity = float(full_match.group(1).replace(".", "").replace(",", "."))
+    health_percent = round((full_capacity / design_capacity) * 100, 2)
 
-    # Converte para número inteiro (remove vírgula e espaços)
-    design_capacity = int(design_match.group(1).replace(",", ""))
-    full_capacity = int(full_match.group(1).replace(",", ""))
-
-    # Calcula a saúde da bateria em %
-    battery_health = round((full_capacity / design_capacity) * 100, 2)
-
-    #  adiciona ao relatório
     return {
         "design_capacity_mWh": design_capacity,
         "full_capacity_mWh": full_capacity,
-        "battery_health_percent": battery_health
+        "battery_health_percent": health_percent
     }
 
 # --- Função principal ---
@@ -393,7 +339,7 @@ def main():
     while True:
         bateria = psutil.sensors_battery()
         if bateria is None:
-            texto("Não foi possível obter informações da bateria.", center=True)
+            texto("Não foi possível obter informações da bateria.", center=True, y=HEIGHT//2)
             pygame.display.flip()
             time.sleep(8)
             pygame.quit()
@@ -418,16 +364,32 @@ def main():
 
     cpu_stress()
     video_playback()
-    texto("Teste concluído! Gerando gráfico...", center=True)
+    texto("Testes finalizados. Gerando relatórios...", center=True, y=HEIGHT//2)
+    pygame.display.flip()
     grafico_final()
-    time.sleep(5)
+    # Cria três linhas de texto para indicar finalização
+    screen.fill((0, 0, 0))
+    t = font.render("Relatório gerado com sucesso!", True, (255, 255, 255))
+    rect = t.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 40))
+    screen.blit(t, rect)
+    t2 = font.render("O relatório foi salvo em C:\\Temp\\relatorio_revycheck.pdf", True, (255, 255, 255))
+    rect2 = t2.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(t2, rect2)
+    t3 = font.render("Pressione ENTER para sair.", True, (255, 255, 255))
+    rect3 = t3.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 40))
+    screen.blit(t3, rect3)
+    pygame.display.flip()
+    esperando = True
+    while esperando:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    esperando = False
+        time.sleep(0.1)
     pygame.quit()
 
 
-# --- Função de gráfico e envio permanece igual ---
-# (mantém grafico_final original)
-
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    multiprocessing.set_start_method('spawn')
+    # multiprocessing.set_start_method('spawn')
     main()
