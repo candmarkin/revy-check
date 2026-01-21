@@ -115,7 +115,4 @@ def showConnectedHeadphoneStatus():
 
 
 if __name__ == "__main__":
-    
-    play_headphone_sequence()
-    play_speaker_sequence()
-    test_microphone_bip()
+     showConnectedHeadphoneStatus()
