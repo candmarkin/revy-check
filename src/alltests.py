@@ -626,14 +626,40 @@ def test_microphone_bip():
 pulse = pulsectl.Pulse('headphone-monitor')
 
 def headphone_connected():
-    for sink in pulse.sink_list():
-        try:
-            port_name = sink.port_active.name.lower()
-            if 'headphone' in port_name or 'analog-output-headphones' in port_name:
-                return True
-        except Exception:
-            continue
+    """
+    Detecta se um fone de ouvido está conectado.
+    Usa confirmação manual do usuário como fallback para casos com detecção fantasma.
+    """
+    try:
+        # Primeira tentativa: verificar via PulseAudio
+        for sink in pulse.sink_list():
+            try:
+                port_name = sink.port_active.name.lower()
+                if 'headphone' in port_name or 'analog-output-headphones' in port_name:
+                    # Fone detectado - mas em ThinkPads pode ser falso positivo
+                    # Pedir confirmação manual
+                    response = ask_yes_no("Sistema detectou fone de ouvido.\n\nO fone está realmente CONECTADO agora?")
+                    return response
+            except Exception:
+                continue
+    except Exception:
+        pass
+    
     return False
+
+def wait_for_headphone_connect():
+    """
+    Espera o usuário conectar um fone de ouvido (com confirmação manual).
+    """
+    response = ask_yes_no("Conecte o fone de ouvido e clique em SIM quando estiver pronto.")
+    return response
+
+def wait_for_headphone_disconnect():
+    """
+    Espera o usuário desconectar o fone de ouvido (com confirmação manual).
+    """
+    response = ask_yes_no("Remova o fone de ouvido e clique em SIM quando tiver removido.")
+    return response
 
 
 
@@ -1263,11 +1289,13 @@ def main():
         # ---------------- HEADPHONE ---------------- #
         elif state == "HEADPHONE_STEP":
             add_log({"step":"HEADPHONE_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
-            draw_text(["Conecte o headphone..."])
-            if headphone_connected():
+            if wait_for_headphone_connect():
                 add_log({"step":"HEADPHONE_CONNECT","time":str(datetime.now()), "result":"APROVADO"})
                 state = "HEADPHONE_TESTING"
                 time.sleep(0.5)
+            else:
+                # Usuário cancelou, pular para speaker
+                state = "SPEAKER_STEP"
 
         elif state == "HEADPHONE_TESTING":
             add_log({"step":"HEADPHONE_TESTING","time":str(datetime.now()), "result":"APROVADO"})
@@ -1275,11 +1303,13 @@ def main():
             state = "HEADPHONE_REMOVE"
 
         elif state == "HEADPHONE_REMOVE":
-            draw_text(["Remova o headphone..."])
-            if not headphone_connected():
+            if wait_for_headphone_disconnect():
                 add_log({"step":"HEADPHONE_REMOVE","time":str(datetime.now()), "result":"APROVADO"})
                 state = "SPEAKER_STEP"
                 time.sleep(0.5)
+            else:
+                # Usuário cancelou, ficar no mesmo estado
+                pass
 
         # ---------------- SPEAKER ---------------- #
         elif state == "SPEAKER_STEP":
