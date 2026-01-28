@@ -225,7 +225,7 @@ def cadastro_portas():
 
         while True:
             try:
-                videoports = subprocess.check_output("ls /sys/class/drm/", shell=True).decode("utf-8").split()
+                videoports = subprocess.check_output("ls /sys/class/drm/ | grep -v card0-eDP-1", shell=True).decode("utf-8").split()
                 videoports = [port for port in videoports if "-" in port]
                 for port in videoports:
                     # segurança: tente ler o status com try/except
