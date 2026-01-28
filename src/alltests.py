@@ -241,7 +241,7 @@ def cadastro_portas():
                             # espera até o cabo ser removido
                             while True:
                                 try:
-                                    if port == "card0-eDP-1":
+                                    if port == "card1-eDP-1":
                                         break
                                     still_connected = subprocess.check_output(f"cat /sys/class/drm/{port}/status", shell=True).decode("utf-8").strip()
                                 except Exception:
