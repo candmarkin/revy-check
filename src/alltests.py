@@ -523,13 +523,13 @@ pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
 
 def wait_for_db_connection():
     try:
-        conn = mysql.connector.connect(
-            host="revy.selbetti.com.br",
-            user="drack",
-            password="jdVg2dF2@",
-            database="revycheck"
-        )
-        conn.close()
+        # conn = mysql.connector.connect(
+        #     host="revy.selbetti.com.br",
+        #     user="drack",
+        #     password="jdVg2dF2@",
+        #     database="revycheck"
+        # )
+        # conn.close()
         has_conn = True
     except:
         has_conn = False
@@ -557,7 +557,7 @@ def wait_for_db_connection():
                 has_conn = False
 
 
-wait_for_db_connection()
+# wait_for_db_connection()
 
 # ---------------- DEV HOTKEY ---------------- #
 DEV_HOTKEY = {pygame.K_LCTRL, pygame.K_LSHIFT, pygame.K_d, pygame.K_v} # conjunto de teclas
