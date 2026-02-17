@@ -554,10 +554,6 @@ def restore_alt_tab():
     ])
 
 
-def camera_test():
-    
-
-
 # ---------------- AUDIO FUNCTIONS ---------------- #
 def generate_tone(freq, duration=DURATION, channel="both"):
     t = np.linspace(0, duration, int(SAMPLE_RATE * duration), endpoint=False)
