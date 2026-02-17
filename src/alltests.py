@@ -409,6 +409,37 @@ def fetch_device_info():
         "HAS_MICROPHONE": device.get("has_microphone", False)
     }
 
+
+
+
+# Dev / Prod mode
+MODE = "PROD"
+DEV_PASSWORD = "dev123"
+
+# Audio
+SAMPLE_RATE = 44100
+DURATION = 0.8
+BIP_FREQ = 4000  # Hz
+FREQUENCIES = [2000, 4000]
+
+# Log
+log_data = []
+
+
+# ---------------- INIT PYGAME ---------------- #
+pygame.init()
+
+# Detecta resolução da tela e usa fullscreen
+info = pygame.display.Info()
+WIDTH, HEIGHT = info.current_w, info.current_h
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+pygame.display.set_caption("Checklist Técnico Completo")
+pygame.mouse.set_visible(True)
+FONT = pygame.font.SysFont("Arial", 20)
+CLOCK = pygame.time.Clock()
+pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
+
+
 def get_system_info():
     """Obtém informações do sistema: serial, CPU, RAM, disco"""
     info = {}
@@ -557,35 +588,6 @@ def consulta_ntp(server='200.160.0.8'):
     except Exception as e:
         print("Erro ao consultar NTP:", e)
         return None
-
-
-# Dev / Prod mode
-MODE = "PROD"
-DEV_PASSWORD = "dev123"
-
-# Audio
-SAMPLE_RATE = 44100
-DURATION = 0.8
-BIP_FREQ = 4000  # Hz
-FREQUENCIES = [2000, 4000]
-
-# Log
-log_data = []
-
-
-# ---------------- INIT PYGAME ---------------- #
-pygame.init()
-
-# Detecta resolução da tela e usa fullscreen
-info = pygame.display.Info()
-WIDTH, HEIGHT = info.current_w, info.current_h
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-pygame.display.set_caption("Checklist Técnico Completo")
-pygame.mouse.set_visible(True)
-FONT = pygame.font.SysFont("Arial", 20)
-CLOCK = pygame.time.Clock()
-pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
-
 
 
 def wait_for_db_connection():
