@@ -409,6 +409,66 @@ def fetch_device_info():
         "HAS_MICROPHONE": device.get("has_microphone", False)
     }
 
+def get_system_info():
+    """Obtém informações do sistema: serial, CPU, RAM, disco"""
+    info = {}
+    
+    # Serial Number
+    try:
+        info['serial'] = subprocess.check_output(
+            "cat /sys/class/dmi/id/product_serial", shell=True
+        ).strip().decode("utf-8")
+    except Exception:
+        info['serial'] = "N/A"
+    
+    # CPU
+    try:
+        cpu_info = subprocess.check_output(
+            "cat /proc/cpuinfo | grep 'model name' | head -1", shell=True
+        ).decode("utf-8")
+        info['cpu'] = cpu_info.split(':')[1].strip() if ':' in cpu_info else "N/A"
+    except Exception:
+        info['cpu'] = "N/A"
+    
+    # RAM Total
+    try:
+        mem_info = subprocess.check_output(
+            "cat /proc/meminfo | grep MemTotal", shell=True
+        ).decode("utf-8")
+        mem_kb = int(mem_info.split()[1])
+        mem_gb = round(mem_kb / (1024 ** 2), 1)
+        info['ram'] = f"{mem_gb} GB"
+    except Exception:
+        info['ram'] = "N/A"
+    
+    # Disco
+    try:
+        disk_info = subprocess.check_output(
+            "df -h / | tail -1", shell=True
+        ).decode("utf-8").split()
+        info['disk'] = disk_info[1]  # Tamanho total
+    except Exception:
+        info['disk'] = "N/A"
+    
+    return info
+
+def draw_system_info(system_info):
+    """Desenha informações do sistema no canto superior esquerdo"""
+    info_font = pygame.font.SysFont("Consolas", 14)
+    y = 10
+    lines = [
+        f"SERIAL: {system_info.get('serial', 'N/A')}",
+        f"CPU: {system_info.get('cpu', 'N/A')}",
+        f"RAM: {system_info.get('ram', 'N/A')}",
+        f"DISK: {system_info.get('disk', 'N/A')}"
+    ]
+    
+    for line in lines:
+        text_surf = info_font.render(line, True, (255, 255, 0))
+        SCREEN.blit(text_surf, (10, y))
+        y += 18
+
+
 
 def start_step():
     waiting = True
@@ -511,66 +571,6 @@ FREQUENCIES = [2000, 4000]
 
 # Log
 log_data = []
-
-# ---------------- SYSTEM INFO ---------------- #
-def get_system_info():
-    """Obtém informações do sistema: serial, CPU, RAM, disco"""
-    info = {}
-    
-    # Serial Number
-    try:
-        info['serial'] = subprocess.check_output(
-            "cat /sys/class/dmi/id/product_serial", shell=True
-        ).strip().decode("utf-8")
-    except Exception:
-        info['serial'] = "N/A"
-    
-    # CPU
-    try:
-        cpu_info = subprocess.check_output(
-            "cat /proc/cpuinfo | grep 'model name' | head -1", shell=True
-        ).decode("utf-8")
-        info['cpu'] = cpu_info.split(':')[1].strip() if ':' in cpu_info else "N/A"
-    except Exception:
-        info['cpu'] = "N/A"
-    
-    # RAM Total
-    try:
-        mem_info = subprocess.check_output(
-            "cat /proc/meminfo | grep MemTotal", shell=True
-        ).decode("utf-8")
-        mem_kb = int(mem_info.split()[1])
-        mem_gb = round(mem_kb / (1024 ** 2), 1)
-        info['ram'] = f"{mem_gb} GB"
-    except Exception:
-        info['ram'] = "N/A"
-    
-    # Disco
-    try:
-        disk_info = subprocess.check_output(
-            "df -h / | tail -1", shell=True
-        ).decode("utf-8").split()
-        info['disk'] = disk_info[1]  # Tamanho total
-    except Exception:
-        info['disk'] = "N/A"
-    
-    return info
-
-def draw_system_info(system_info):
-    """Desenha informações do sistema no canto superior esquerdo"""
-    info_font = pygame.font.SysFont("Consolas", 14)
-    y = 10
-    lines = [
-        f"SERIAL: {system_info.get('serial', 'N/A')}",
-        f"CPU: {system_info.get('cpu', 'N/A')}",
-        f"RAM: {system_info.get('ram', 'N/A')}",
-        f"DISK: {system_info.get('disk', 'N/A')}"
-    ]
-    
-    for line in lines:
-        text_surf = info_font.render(line, True, (255, 255, 0))
-        SCREEN.blit(text_surf, (10, y))
-        y += 18
 
 
 # ---------------- INIT PYGAME ---------------- #
