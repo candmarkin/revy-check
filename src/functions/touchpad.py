@@ -27,7 +27,11 @@ def touchpad_step():
     - Clique com o botão direito
     - Use o scroll para cima e para baixo
     """
+    
+    # printa path da main
+    print("Current sys.path:", sys.path)
     from ..main import SCREEN, WIDTH, HEIGHT, FONT, CLOCK
+    
     
     # Estados do teste
     state = "DRAG_LEFT"
