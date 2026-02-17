@@ -1,11 +1,16 @@
 import pygame
 import time
+import sys
 from datetime import datetime
 
 
 def draw_text(lines, color=(255, 255, 255)):
     """Desenha texto centralizado na tela seguindo o padrão do main.py"""
-    from ..main import SCREEN, WIDTH, HEIGHT, FONT
+    try:
+        from src.alltests import SCREEN, WIDTH, HEIGHT, FONT
+    except ImportError:
+        # Para quando é importado como módulo
+        from ..alltests import SCREEN, WIDTH, HEIGHT, FONT
     
     SCREEN.fill((0, 0, 0))
     y = HEIGHT // 3
@@ -27,10 +32,10 @@ def touchpad_step():
     - Clique com o botão direito
     - Use o scroll para cima e para baixo
     """
-    
-    # printa path da main
-    print("Current sys.path:", sys.path)
-    from ..alltests import SCREEN, WIDTH, HEIGHT, FONT, CLOCK
+    try:
+        from src.alltests import SCREEN, WIDTH, HEIGHT, FONT, CLOCK
+    except ImportError:
+        from ..alltests import SCREEN, WIDTH, HEIGHT, FONT, CLOCK
     
     
     # Estados do teste
@@ -135,11 +140,16 @@ def touchpad_step():
         CLOCK.tick(10)
 
 
+
 if __name__ == "__main__":
     import sys
-    sys.path.insert(0, '../..')
+    import os
     
-    # Simular ambiente do main.py para teste standalone
+    # Adiciona o diretório raiz ao path para permitir imports absolutos
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+    sys.path.insert(0, root_dir)
+    
+    # Simular ambiente do alltests.py para teste standalone
     pygame.init()
     WIDTH, HEIGHT = 1920, 1080
     SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -147,9 +157,15 @@ if __name__ == "__main__":
     FONT = pygame.font.SysFont("Arial", 20)
     CLOCK = pygame.time.Clock()
     
-    # Injetar no namespace para import relativo funcionar
-    # printa path para debug
-    print("Current sys.path:", sys.path)
+    # Criar módulo temporário para simular alltests
+    import types
+    alltests_module = types.ModuleType('alltests')
+    alltests_module.SCREEN = SCREEN
+    alltests_module.WIDTH = WIDTH
+    alltests_module.HEIGHT = HEIGHT
+    alltests_module.FONT = FONT
+    alltests_module.CLOCK = CLOCK
+    sys.modules['src.alltests'] = alltests_module
     
     print("Iniciando teste de touchpad...")
     results = touchpad_step()
@@ -166,3 +182,4 @@ if __name__ == "__main__":
     
     pygame.quit()
     sys.exit(0)
+
