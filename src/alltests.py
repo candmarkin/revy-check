@@ -539,13 +539,13 @@ def wait_for_db_connection():
     else:
         while not has_conn:
             try:
-                conn = mysql.connector.connect(
-                    host="revy.selbetti.com.br",
-                    user="drack",
-                    password="jdVg2dF2@",
-                    database="revycheck"
-                )
-                conn.close()
+                # conn = mysql.connector.connect(
+                #     host="revy.selbetti.com.br",
+                #     user="drack",
+                #     password="jdVg2dF2@",
+                #     database="revycheck"
+                # )
+                # conn.close()
                 has_conn = True
                 pygame.quit()
                 sys.exit(0)
