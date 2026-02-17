@@ -472,12 +472,15 @@ def get_system_info():
     except Exception:
         info['ram'] = "N/A"
     
-    # Disco
+    # Todos os discos
     try:
         disk_info = subprocess.check_output(
             "df -h / | tail -1", shell=True
         ).decode("utf-8").split()
-        info['disk'] = disk_info[1]  # Tamanho total
+        if len(disk_info) >= 2:
+            info['disk'] = disk_info[1]  # Tamanho total do disco
+        else:
+            info['disk'] = "N/A"
     except Exception:
         info['disk'] = "N/A"
     
@@ -564,9 +567,6 @@ def start_step():
                         waiting = False
 
         CLOCK.tick(30)
-
-
-start_step()
 
 
 import ntplib
