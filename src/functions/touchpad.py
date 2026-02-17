@@ -144,12 +144,8 @@ if __name__ == "__main__":
     CLOCK = pygame.time.Clock()
     
     # Injetar no namespace para import relativo funcionar
-    import src.main as main_module
-    main_module.SCREEN = SCREEN
-    main_module.WIDTH = WIDTH
-    main_module.HEIGHT = HEIGHT
-    main_module.FONT = FONT
-    main_module.CLOCK = CLOCK
+    # printa path para debug
+    print("Current sys.path:", sys.path)
     
     print("Iniciando teste de touchpad...")
     results = touchpad_step()
