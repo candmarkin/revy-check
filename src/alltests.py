@@ -445,6 +445,66 @@ FREQUENCIES = [2000, 4000]
 # Log
 log_data = []
 
+# ---------------- SYSTEM INFO ---------------- #
+def get_system_info():
+    """Obtém informações do sistema: serial, CPU, RAM, disco"""
+    info = {}
+    
+    # Serial Number
+    try:
+        info['serial'] = subprocess.check_output(
+            "cat /sys/class/dmi/id/product_serial", shell=True
+        ).strip().decode("utf-8")
+    except Exception:
+        info['serial'] = "N/A"
+    
+    # CPU
+    try:
+        cpu_info = subprocess.check_output(
+            "cat /proc/cpuinfo | grep 'model name' | head -1", shell=True
+        ).decode("utf-8")
+        info['cpu'] = cpu_info.split(':')[1].strip() if ':' in cpu_info else "N/A"
+    except Exception:
+        info['cpu'] = "N/A"
+    
+    # RAM Total
+    try:
+        mem_info = subprocess.check_output(
+            "cat /proc/meminfo | grep MemTotal", shell=True
+        ).decode("utf-8")
+        mem_kb = int(mem_info.split()[1])
+        mem_gb = round(mem_kb / (1024 ** 2), 1)
+        info['ram'] = f"{mem_gb} GB"
+    except Exception:
+        info['ram'] = "N/A"
+    
+    # Disco
+    try:
+        disk_info = subprocess.check_output(
+            "df -h / | tail -1", shell=True
+        ).decode("utf-8").split()
+        info['disk'] = disk_info[1]  # Tamanho total
+    except Exception:
+        info['disk'] = "N/A"
+    
+    return info
+
+def draw_system_info(system_info):
+    """Desenha informações do sistema no canto superior esquerdo"""
+    info_font = pygame.font.SysFont("Consolas", 14)
+    y = 10
+    lines = [
+        f"SERIAL: {system_info.get('serial', 'N/A')}",
+        f"CPU: {system_info.get('cpu', 'N/A')}",
+        f"RAM: {system_info.get('ram', 'N/A')}",
+        f"DISK: {system_info.get('disk', 'N/A')}"
+    ]
+    
+    for line in lines:
+        text_surf = info_font.render(line, True, (255, 255, 0))
+        SCREEN.blit(text_surf, (10, y))
+        y += 18
+
 
 # ---------------- INIT PYGAME ---------------- #
 pygame.init()
@@ -849,6 +909,7 @@ def keyboard_step():
     global MODE, MANUFACTURER, PRODUCT_NAME
     running = True
     last_key_info = ""  # armazena a última tecla pressionada
+    system_info = get_system_info()  # Obter info do sistema
 
     while running:
         for event in pygame.event.get():
@@ -883,6 +944,9 @@ def keyboard_step():
         SCREEN.fill((240, 240, 240))
         draw_keyboard()
         unlocked = draw_kb_unlock_button()
+        
+        # Desenhar informações do sistema
+        draw_system_info(system_info)
 
         # --- Mostrar tecla pressionada no modo DEV ---
         if MODE == "DEV" and last_key_info:
@@ -915,7 +979,7 @@ def screen_step():
     running = True
     test_done = False
     approved = None
-
+    system_info = get_system_info()  # Obter info do sistema
 
     legend_font = pygame.font.SysFont("Arial", 18)
     legend_text = "Pressione ENTER para alternar cores e ESPAÇO para finalizar o teste"
@@ -949,6 +1013,9 @@ def screen_step():
 
         if not test_done:
             SCREEN.fill(colors[color_index])
+            
+            # Desenhar informações do sistema
+            draw_system_info(system_info)
 
             legend_surface = legend_font.render(legend_text, True, (255, 255, 255))
             legend_rect = legend_surface.get_rect()
@@ -996,7 +1063,12 @@ def get_video_status():
 
 def draw_video(outputs):
     SCREEN.fill((30, 30, 30))
-    y = 50
+    
+    # Desenhar informações do sistema
+    system_info = get_system_info()
+    draw_system_info(system_info)
+    
+    y = 100  # Aumentar y inicial para não sobrepor info do sistema
     all_approved = True
     for o in outputs:
         if o['aprovado']:
@@ -1053,6 +1125,11 @@ def ethernet_step():
 # ---------------- GUI ---------------- #
 def draw_text(lines, color=(255, 255, 255)):
     SCREEN.fill((0, 0, 0))
+    
+    # Desenhar informações do sistema no canto superior esquerdo
+    system_info = get_system_info()
+    draw_system_info(system_info)
+    
     y = HEIGHT // 3
     for text in lines:
         rendered = FONT.render(text, True, color)
@@ -1093,6 +1170,7 @@ def prompt_password():
 def start_step():
     waiting = True
     selected_option = None
+    system_info = get_system_info()  # Obter info do sistema
 
     # Lista de opções
     options = [
@@ -1113,6 +1191,9 @@ def start_step():
 
     while waiting:
         SCREEN.fill((30, 30, 30))
+        
+        # Desenhar informações do sistema
+        draw_system_info(system_info)
 
         # Título
         title = FONT.render("Selecione o tipo de teste", True, (255, 255, 255))
@@ -1156,11 +1237,19 @@ def main():
     state = "START_STEP"
     step = 0
     waiting_remove = False
+    
+    # Obter informações do sistema uma vez no início
+    system_info = get_system_info()
 
     running = True
     while running:
 
         SCREEN.fill((0,0,0))
+        
+        # Desenhar informações do sistema no canto superior esquerdo
+        draw_system_info(system_info)
+        
+        # Desenhar estado atual no canto superior direito
         legend_font = pygame.font.SysFont("Arial", 8)  
         legend_surface = legend_font.render(state, True, (255, 255, 255))
         legend_rect = legend_surface.get_rect()
