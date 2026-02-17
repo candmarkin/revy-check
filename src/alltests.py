@@ -625,9 +625,6 @@ def wait_for_db_connection():
                 pygame.display.flip()
                 has_conn = False
 
-
-start_step()
-
 # wait_for_db_connection()
 
 # ---------------- DEV HOTKEY ---------------- #
