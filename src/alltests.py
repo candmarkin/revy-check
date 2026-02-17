@@ -410,6 +410,73 @@ def fetch_device_info():
     }
 
 
+def start_step():
+    waiting = True
+    selected_option = None
+    system_info = get_system_info()  # Obter info do sistema
+
+    # Lista de opções
+    options = [
+        "QUALIDADE1",
+        "QUALIDADE2",
+        "VISTORIA1",
+        "VISTORIA2",
+        "VISTORIA3",
+        "VISTORIA4"
+    ]
+
+    # Criação dinâmica dos botões
+    button_rects = []
+    start_y = HEIGHT // 2 - len(options) * 50 // 2
+    for i, opt in enumerate(options):
+        rect = pygame.Rect(WIDTH//2 - 150, start_y + i * 80, 300, 60)
+        button_rects.append((opt, rect))
+
+    while waiting:
+        SCREEN.fill((30, 30, 30))
+        
+        # Desenhar informações do sistema
+        draw_system_info(system_info)
+
+        # Título
+        title = FONT.render("Selecione o tipo de teste", True, (255, 255, 255))
+        SCREEN.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//4))
+
+        # Renderiza os botões
+        mouse_pos = pygame.mouse.get_pos()
+        for opt, rect in button_rects:
+            # Efeito hover
+            color = (0, 200, 0) if rect.collidepoint(mouse_pos) else (0, 150, 0)
+            pygame.draw.rect(SCREEN, color, rect, border_radius=12)
+            text = FONT.render(opt, True, (255, 255, 255))
+            SCREEN.blit(text, (rect.centerx - text.get_width()//2, rect.centery - text.get_height()//2))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                for opt, rect in button_rects:
+                    if rect.collidepoint(event.pos):
+                        selected_option = opt
+                        log_data = {
+                            "step": f"TEST_START_{selected_option.upper().replace(' ', '_')}",
+                            "time": str(datetime.now()),
+                            "result": "APROVADO"
+                        }
+                        add_log(log_data)
+                        waiting = False
+
+        CLOCK.tick(30)
+
+
+start_step()
+
 
 import ntplib
 from datetime import timezone, timedelta
@@ -523,13 +590,13 @@ pygame.mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2)
 
 def wait_for_db_connection():
     try:
-        # conn = mysql.connector.connect(
-        #     host="revy.selbetti.com.br",
-        #     user="drack",
-        #     password="jdVg2dF2@",
-        #     database="revycheck"
-        # )
-        # conn.close()
+        conn = mysql.connector.connect(
+            host="revy.selbetti.com.br",
+            user="drack",
+            password="jdVg2dF2@",
+            database="revycheck"
+        )
+        conn.close()
         has_conn = True
     except:
         has_conn = False
@@ -556,6 +623,8 @@ def wait_for_db_connection():
                 pygame.display.flip()
                 has_conn = False
 
+
+start_step()
 
 # wait_for_db_connection()
 
@@ -1237,6 +1306,7 @@ def main():
     state = "START_STEP"
     step = 0
     waiting_remove = False
+
     
     # Obter informações do sistema uma vez no início
     system_info = get_system_info()
