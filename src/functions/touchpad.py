@@ -30,7 +30,7 @@ def touchpad_step():
     
     # printa path da main
     print("Current sys.path:", sys.path)
-    from ..main import SCREEN, WIDTH, HEIGHT, FONT, CLOCK
+    from ..alltests import SCREEN, WIDTH, HEIGHT, FONT, CLOCK
     
     
     # Estados do teste
