@@ -335,10 +335,10 @@ if __name__ == "__main__":
     
     # Configuração SMB de exemplo
     smb_config = {
-        'server': '192.168.1.100',
-        'share': 'fotos',
-        'username': 'usuario',
-        'password': 'senha',
+        'server': '192.168.3.118',
+        'share': 'smbshare',
+        'username': 'Marcos',
+        'password': 'password',
         'remote_path': 'cameras'
     }
     

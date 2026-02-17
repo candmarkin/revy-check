@@ -554,6 +554,9 @@ def restore_alt_tab():
     ])
 
 
+def camera_test():
+    
+
 
 # ---------------- AUDIO FUNCTIONS ---------------- #
 def generate_tone(freq, duration=DURATION, channel="both"):
