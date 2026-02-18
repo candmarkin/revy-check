@@ -11,6 +11,9 @@ from datetime import datetime
 import mysql.connector
 import tkinter as tk
 from tkinter import simpledialog, messagebox
+from src.functions.touchpad import touchpad_step
+from src.functions.wifi import WiFiTest
+from src.functions.camera import camera_test_step
 
 # ---------------- APP CADASTRO ----------------
 def has_pendrive_connected_cd():
@@ -97,14 +100,14 @@ def try_connect_db(cfg):
     except Exception as e:
         return False, str(e)
 
-def send_to_db(conn, productname, has_screen, has_keyboard, has_eth, eth_interface, has_speaker, has_headphone, has_mic, port_map, video_ports):
+def send_to_db(conn, productname, has_screen, has_keyboard, has_eth, eth_interface, has_speaker, has_headphone, has_mic, has_wifi, has_touchpad, has_camera, port_map, video_ports):
     cursor = conn.cursor()
     try:
         # devices
         insert_device = (
             "INSERT INTO devices "
-            "(name, type, has_embedded_screen, has_embedded_keyboard, has_ethernet, eth_interface, has_speaker, has_headphone_jack, has_microphone) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            "(name, type, has_embedded_screen, has_embedded_keyboard, has_ethernet, eth_interface, has_speaker, has_headphone_jack, has_microphone, has_wifi, has_touchpad, has_camera) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         )
         device_vals = (
             productname, 'Notebook',
@@ -114,7 +117,10 @@ def send_to_db(conn, productname, has_screen, has_keyboard, has_eth, eth_interfa
             eth_interface,
             1 if has_speaker else 0,
             1 if has_headphone else 0,
-            1 if has_mic else 0
+            1 if has_mic else 0,
+            1 if has_wifi else 0,
+            1 if has_touchpad else 0,
+            1 if has_camera else 0
         )
         cursor.execute(insert_device, device_vals)
         dev_id = cursor.lastrowid
@@ -215,6 +221,9 @@ def cadastro_portas():
     HAS_SPEAKER = ask_yes_no("Seu dispositivo possui alto-falante?")
     HAS_HEADPHONE_JACK = ask_yes_no("Seu dispositivo possui entrada para fone de ouvido?")
     HAS_MICROPHONE = ask_yes_no("Seu dispositivo possui microfone embutido?")
+    HAS_WIFI = ask_yes_no("Seu dispositivo possui WiFi?")
+    HAS_TOUCHPAD = ask_yes_no("Seu dispositivo possui touchpad?")
+    HAS_CAMERA = ask_yes_no("Seu dispositivo possui camera?")
 
     # ----------------- CADASTRO PORTAS DE VIDEO -----------------
     messagebox.showinfo("Cadastro", "Agora, vamos cadastrar as portas de vídeo onde você conecta os monitores externos.")
@@ -308,6 +317,9 @@ def cadastro_portas():
     resumo += f"\nAlto-falante? {'Sim' if HAS_SPEAKER else 'Não'}"
     resumo += f"\nFone de ouvido? {'Sim' if HAS_HEADPHONE_JACK else 'Não'}"
     resumo += f"\nMicrofone? {'Sim' if HAS_MICROPHONE else 'Não'}"
+    resumo += f"\nWiFi? {'Sim' if HAS_WIFI else 'Não'}"
+    resumo += f"\nTouchpad? {'Sim' if HAS_TOUCHPAD else 'Não'}"
+    resumo += f"\nCamera? {'Sim' if HAS_CAMERA else 'Não'}"
     resumo += f"\nInterface Ethernet: {ETH_INTERFACE}"
     resumo += f"\nNome do produto: {productname}"
 
@@ -315,7 +327,7 @@ def cadastro_portas():
 
     if confirm:
         # envia direto para o DB
-        success, err = send_to_db(db_conn, productname, HAS_EMBEDDED_SCREEN, HAS_EMBEDDED_KEYBOARD, HAS_ETHERNET_PORT, ETH_INTERFACE, HAS_SPEAKER, HAS_HEADPHONE_JACK, HAS_MICROPHONE, PORT_MAP, VIDEO_PORTS)
+        success, err = send_to_db(db_conn, productname, HAS_EMBEDDED_SCREEN, HAS_EMBEDDED_KEYBOARD, HAS_ETHERNET_PORT, ETH_INTERFACE, HAS_SPEAKER, HAS_HEADPHONE_JACK, HAS_MICROPHONE, HAS_WIFI, HAS_TOUCHPAD, HAS_CAMERA, PORT_MAP, VIDEO_PORTS)
         if success:
             messagebox.showinfo("Sucesso", "Dados inseridos no banco com sucesso!")
         else:
@@ -406,7 +418,10 @@ def fetch_device_info():
         "ETH_INTERFACE": device.get("eth_interface", "eth0"),
         "HAS_SPEAKER": device.get("has_speaker", False),
         "HAS_HEADPHONE_JACK": device.get("has_headphone_jack", False),
-        "HAS_MICROPHONE": device.get("has_microphone", False)
+        "HAS_MICROPHONE": device.get("has_microphone", False),
+        "HAS_WIFI": device.get("has_wifi", False),
+        "HAS_TOUCHPAD": device.get("has_touchpad", False),
+        "HAS_CAMERA": device.get("has_camera", False)
     }
 
 
@@ -644,6 +659,9 @@ ETH_INTERFACE = config["ETH_INTERFACE"]
 HAS_SPEAKER = config["HAS_SPEAKER"]
 HAS_HEADPHONE_JACK = config["HAS_HEADPHONE_JACK"]
 HAS_MICROPHONE = config["HAS_MICROPHONE"]
+HAS_WIFI = config["HAS_WIFI"]
+HAS_TOUCHPAD = config["HAS_TOUCHPAD"]
+HAS_CAMERA = config["HAS_CAMERA"]
 
 
 print(VIDEO_PORTS)
@@ -1367,12 +1385,43 @@ def main():
                 add_log({"step":"SCREEN_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 screen_step()
             state = "KEYBOARD_STEP"
+            
         # ---------------- TECLADO ---------------- #
         if state == "KEYBOARD_STEP":
             if HAS_EMBEDDED_KEYBOARD:
                 add_log({"step":"KEYBOARD_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
                 keyboard_step()
+            state = "TOUCHPAD_STEP"
+
+        # ---------------- TOUCHPAD ---------------- #
+        elif state == "TOUCHPAD_STEP":
+            if HAS_TOUCHPAD:
+                add_log({"step":"TOUCHPAD_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                results = touchpad_step()
+                for entry in results:
+                    result = "REPROVADO" if entry.get("step") == "TOUCHPAD_REPROVED" else "APROVADO"
+                    add_log({"step": entry.get("step"), "time": entry.get("time"), "result": result})
+            state = "WIFI_STEP"
+
+        # ---------------- WIFI ---------------- #
+        elif state == "WIFI_STEP":
+            if HAS_WIFI:
+                add_log({"step":"WIFI_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                wifi_test = WiFiTest(SCREEN, FONT)
+                result = wifi_test.run()
+                wifi_result = "APROVADO" if result.get("success") else "REPROVADO"
+                add_log({"step":"WIFI_TEST","time":str(datetime.now()), "result": wifi_result})
+            state = "CAMERA_STEP"
+
+        # ---------------- CAMERA ---------------- #
+        elif state == "CAMERA_STEP":
+            if HAS_CAMERA:
+                add_log({"step":"CAMERA_TEST_START","time":str(datetime.now()), "result":"APROVADO"})
+                cam_result = camera_test_step(SCREEN, FONT, device_serial=system_info.get("serial"))
+                cam_status = "APROVADO" if cam_result.get("success") else "REPROVADO"
+                add_log({"step":"CAMERA_TEST","time":str(datetime.now()), "result": cam_status})
             state = "USB_STEP"
+
         # ---------------- USB ---------------- #
         elif state == "USB_STEP" and step < len(PORT_MAP):
             bus, port_id, port_name = PORT_MAP[step]
