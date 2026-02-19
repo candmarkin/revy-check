@@ -39,7 +39,7 @@ def get_system_info():
             "lsblk -o NAME,SIZE -dn", shell=True
         ).decode("utf-8").strip().splitlines()
         if len(disk_info) >= 2:
-            info["disk"] = disk_info[1]
+            info["disk"] = " / ".join(disk_info)
         else:
             info["disk"] = "N/A"
     except Exception:
