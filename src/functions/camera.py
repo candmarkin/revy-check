@@ -119,6 +119,12 @@ class CameraTest:
             username = "marcos"
             password = "Marquinh0!"
             remote_path = ""
+        else:
+            server = self.smb_config.get("server", "")
+            share = self.smb_config.get("share", "")
+            username = self.smb_config.get("username", "")
+            password = self.smb_config.get("password", "")
+            remote_path = self.smb_config.get("remote_path", "")
         
         try:
             
@@ -136,7 +142,7 @@ class CameraTest:
             # Montar
             mount_cmd = [
                 "sudo", "mount", "-t", "cifs",
-                "-o", f"username={username},password='{password}',vers=3.0,uid=$(id -u),gid=$(id -g)",
+                "-o", f"username={username},password={password},vers=3.0,uid={os.getuid()},gid={os.getgid()}",
                 f"//{server}/{share}",
                 str(mount_point)
             ]
@@ -331,6 +337,7 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
     font = pygame.font.SysFont("Arial", 24)
+    smb_config = {}
     
     result = camera_test_step(screen, font, device_serial="TEST123", smb_config=smb_config)
     print(result)
