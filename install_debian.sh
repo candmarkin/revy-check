@@ -30,12 +30,11 @@ apt-get install -y \
     python3-pygame \
     python3-opencv \
     python3-numpy \
-    python3-mysql.connector \
+    mysql-connector-python \
     python3-pulsectl \
     python3-sounddevice \
     python3-tk \
     cifs-utils \
-    ntpdate \
     lsusb \
     usbutils \
     net-tools \
