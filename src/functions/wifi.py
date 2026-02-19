@@ -31,7 +31,7 @@ class WiFiTest:
         """Detecta a interface WiFi do sistema"""
         try:
             # Método 1: iw dev
-            output = subprocess.check_output(["sudo", "iw", "dev"], text=True, stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["iw", "dev"], text=True, stderr=subprocess.DEVNULL, timeout=5)
             for line in output.split('\n'):
                 if 'Interface' in line:
                     interface = line.split()[-1]
@@ -42,7 +42,7 @@ class WiFiTest:
             
             # Método 2: ip link
             if not self.wifi_interface:
-                output = subprocess.check_output(["ip", "link", "show"], text=True)
+                output = subprocess.check_output(["ip", "link", "show"], text=True, timeout=5)
                 for line in output.split('\n'):
                     if 'wlan' in line or 'wlp' in line:
                         match = re.search(r'\d+:\s+(\w+):', line)
@@ -56,7 +56,8 @@ class WiFiTest:
                 output = subprocess.check_output(
                     ["nmcli", "device", "status"], 
                     text=True, 
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    timeout=5
                 )
                 for line in output.split('\n')[1:]:
                     if 'wifi' in line.lower():
@@ -82,7 +83,8 @@ class WiFiTest:
             # Verificar se a interface está UP
             output = subprocess.check_output(
                 ["ip", "link", "show", self.wifi_interface], 
-                text=True
+                text=True,
+                timeout=5
             )
             self.wifi_enabled = "UP" in output and "state UP" in output
             return self.wifi_enabled
@@ -95,14 +97,30 @@ class WiFiTest:
             return False, "Interface WiFi não detectada"
         
         try:
-            # Tentar com ip link
-            subprocess.run(
-                ["sudo", "ip", "link", "set", self.wifi_interface, "up"],
-                check=True,
-                capture_output=True
+            ip_result = subprocess.run(
+                ["ip", "link", "set", self.wifi_interface, "up"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=5
             )
-            time.sleep(2)
-            return True, "WiFi habilitado"
+            if ip_result.returncode == 0:
+                time.sleep(2)
+                return True, "WiFi habilitado"
+
+            nmcli_result = subprocess.run(
+                ["nmcli", "radio", "wifi", "on"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if nmcli_result.returncode == 0:
+                time.sleep(2)
+                return True, "WiFi habilitado"
+
+            error_message = ip_result.stderr.strip() or nmcli_result.stderr.strip() or "Falha ao habilitar WiFi"
+            return False, error_message
         except Exception as e:
             return False, f"Erro ao habilitar WiFi: {str(e)}"
     
@@ -115,7 +133,7 @@ class WiFiTest:
             # Método 1: iw scan
             try:
                 output = subprocess.check_output(
-                    ["sudo", "iw", self.wifi_interface, "scan"],
+                    ["iw", self.wifi_interface, "scan"],
                     text=True,
                     stderr=subprocess.DEVNULL,
                     timeout=10
@@ -170,7 +188,8 @@ class WiFiTest:
                 output = subprocess.check_output(
                     ["nmcli", "-f", "SSID,SIGNAL,FREQ,BSSID", "device", "wifi", "list"],
                     text=True,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    timeout=10
                 )
                 
                 networks = []
@@ -216,7 +235,8 @@ class WiFiTest:
                 output = subprocess.check_output(
                     ["iw", self.wifi_interface, "link"],
                     text=True,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    timeout=5
                 )
                 
                 if "Not connected" in output:
@@ -240,7 +260,8 @@ class WiFiTest:
                 output = subprocess.check_output(
                     ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL", "device", "wifi"],
                     text=True,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    timeout=5
                 )
                 
                 for line in output.split('\n'):
@@ -420,6 +441,8 @@ class WiFiTest:
         running = True
         scanning = False
         approved = False
+        max_wait_seconds = 20
+        started_at = time.time()
         
         # Detectar interface WiFi
         has_wifi, info = self.detect_wifi_interface()
@@ -489,6 +512,7 @@ class WiFiTest:
                         
                         success, networks = self.scan_networks()
                         scanning = False
+                        started_at = time.time()
                         
                         message = f"{len(networks)} redes encontradas" if success else "Erro ao escanear"
                         message_color = (0, 255, 0) if len(networks) > 0 else (255, 0, 0)
@@ -508,6 +532,23 @@ class WiFiTest:
                         else:
                             message = "Escaneie redes antes de aprovar"
                             message_color = (255, 165, 0)
+
+            elapsed = time.time() - started_at
+            if elapsed >= max_wait_seconds:
+                if len(self.networks_found) > 0:
+                    return {
+                        'success': True,
+                        'message': f"WiFi OK - auto aprovação após {max_wait_seconds}s",
+                        'interface': self.wifi_interface,
+                        'networks_found': len(self.networks_found),
+                        'networks': self.networks_found[:5]
+                    }
+                return {
+                    'success': False,
+                    'message': f"Timeout no teste WiFi ({max_wait_seconds}s)",
+                    'interface': self.wifi_interface,
+                    'networks_found': len(self.networks_found)
+                }
             
             self.draw_ui(message, message_color, self.networks_found, scanning)
             clock.tick(30)
