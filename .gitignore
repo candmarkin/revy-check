@@ -16,6 +16,7 @@ __pycache__/
 # Distribution / packaging
 build/
 dist/
+venv/
 *.egg-info/
 
 # OS files
