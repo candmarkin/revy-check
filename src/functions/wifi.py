@@ -157,10 +157,10 @@ class WiFiTest:
         
         try:
             # Método 1: iw scan
-            if self._command_exists("iw"):
+            if self._command_exists("sudo iw"):
                 try:
                     output = subprocess.check_output(
-                        ["iw", self.wifi_interface, "scan"],
+                        ["sudo", "iw", self.wifi_interface, "scan"],
                         text=True,
                         stderr=subprocess.DEVNULL,
                         timeout=10
