@@ -1,6 +1,6 @@
 import subprocess
 
-# ---------------- USB ---------------- #
+
 def port_has_device(bus, port_id):
     try:
         output = subprocess.check_output(["lsusb", "-t"], text=True)

@@ -114,14 +114,19 @@ class CameraTest:
             return False, "Nenhuma foto para enviar"
         
         if not self.smb_config:
-            return False, "Configuração SMB não definida"
+            server = "172.16.48.33"
+            share = "publico/Relatorios/RevyCheck/Camera"
+            username = "marcos"
+            password = "Marquinh0!"
+            remote_path = ""
+        else:
+            server = self.smb_config.get("server", "")
+            share = self.smb_config.get("share", "")
+            username = self.smb_config.get("username", "")
+            password = self.smb_config.get("password", "")
+            remote_path = self.smb_config.get("remote_path", "")
         
         try:
-            server = self.smb_config.get('server')
-            share = self.smb_config.get('share')
-            username = self.smb_config.get('username')
-            password = self.smb_config.get('password')
-            remote_path = self.smb_config.get('remote_path', '')
             
             if not all([server, share, username, password]):
                 return False, "Configuração SMB incompleta"
@@ -137,9 +142,9 @@ class CameraTest:
             # Montar
             mount_cmd = [
                 "sudo", "mount", "-t", "cifs",
+                "-o", f"username={username},password={password},vers=3.0,uid={os.getuid()},gid={os.getgid()}",
                 f"//{server}/{share}",
-                str(mount_point),
-                "-o", f"username={username},password={password}"
+                str(mount_point)
             ]
             
             result = subprocess.run(mount_cmd, capture_output=True, text=True)
@@ -332,15 +337,7 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
     font = pygame.font.SysFont("Arial", 24)
-    
-    # Configuração SMB de exemplo
-    smb_config = {
-        'server': '192.168.3.118',
-        'share': 'smbshare',
-        'username': 'Marcos',
-        'password': 'password',
-        'remote_path': 'cameras'
-    }
+    smb_config = {}
     
     result = camera_test_step(screen, font, device_serial="TEST123", smb_config=smb_config)
     print(result)
