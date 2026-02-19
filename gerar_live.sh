@@ -14,7 +14,7 @@ sudo mkdir -p $LIVE_DIR
 sudo rm -f $LIVE_DIR/filesystem.squashfs
 
 echo "[2/6] Copiando sistema..."
-sudo rsync -aAX --numeric-ids 
+sudo rsync -aAX
 / $IMG_DIR 
 --exclude=$IMG_DIR 
 --exclude=/proc/* 
