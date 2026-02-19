@@ -114,18 +114,13 @@ class CameraTest:
             return False, "Nenhuma foto para enviar"
         
         if not self.smb_config:
-            server = "revyserver"
-            share = "publico/Relatorios/"
+            server = "172.16.48.33"
+            share = "publico/Relatorios/RevyCheck/Camera"
             username = "marcos"
             password = "Marquinh0!"
-            remote_path = self.smb_config.get('remote_path', '')
+            remote_path = ""
         
         try:
-            server = "revyserver"
-            share = "publico/Relatorios/"
-            username = "marcos"
-            password = "Marquinh0!"
-            remote_path = self.smb_config.get('remote_path', '')
             
             if not all([server, share, username, password]):
                 return False, "Configuração SMB incompleta"
