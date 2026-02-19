@@ -38,7 +38,7 @@ def get_system_info():
         disk_info = subprocess.check_output(
             "lsblk -o NAME,SIZE -dn", shell=True
         ).decode("utf-8").strip().splitlines()
-        if len(disk_info) >= 2:
+        if len(disk_info) >= 1:
             info["disk"] = " / ".join(disk_info)
         else:
             info["disk"] = "N/A"
@@ -53,7 +53,7 @@ def draw_system_info(system_info):
     if app_state.SCREEN is None:
         return
 
-    info_font = pygame.font.SysFont("Consolas", 14)
+    info_font = pygame.font.SysFont("Consolas", 20)
     y = 10
     lines = [
         f"SERIAL: {system_info.get('serial', 'N/A')}",
