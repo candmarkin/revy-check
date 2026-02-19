@@ -80,7 +80,7 @@ def main():
     init_video_state(video_ports)
 
     pressed_keys = set()
-    state = "START_STEP"
+    state = "CAMERA_STEP"
     step = 0
     waiting_remove = False
 
