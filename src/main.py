@@ -80,7 +80,7 @@ def main():
     init_video_state(video_ports)
 
     pressed_keys = set()
-    state = "CAMERA_STEP"
+    state = "START_STEP"
     step = 0
     waiting_remove = False
 
@@ -124,7 +124,7 @@ def main():
 
         if state == "START_STEP":
             start_step()
-            state = "TOUCHPAD_STEP"
+            state = "SCREEN_STEP"
             continue
 
         if state == "SCREEN_STEP":
