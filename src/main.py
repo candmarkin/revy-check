@@ -163,7 +163,7 @@ def main():
                 cam_result = camera_test_step(app_state.SCREEN, app_state.FONT, device_serial=app_state.SYSTEM_INFO.get("serial"))
                 cam_status = "APROVADO" if cam_result.get("success") else "REPROVADO"
                 app_state.add_log({"step": "CAMERA_TEST", "time": str(datetime.now()), "result": cam_status})
-            state = "DONE"
+            state = "USB_STEP"
 
         elif state == "USB_STEP" and step < len(port_map):
             bus, port_id, port_name = port_map[step]
