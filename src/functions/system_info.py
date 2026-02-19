@@ -36,8 +36,8 @@ def get_system_info():
 
     try:
         disk_info = subprocess.check_output(
-            "df -h / | tail -1", shell=True
-        ).decode("utf-8").split()
+            "lsblk -o NAME,SIZE -dn", shell=True
+        ).decode("utf-8").strip().splitlines()
         if len(disk_info) >= 2:
             info["disk"] = disk_info[1]
         else:
