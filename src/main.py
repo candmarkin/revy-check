@@ -2,26 +2,32 @@ import subprocess
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import pygame
 
-from . import app_state
-from functions.app_flow import prompt_password, start_step, wait_for_db_connection
-from functions.audio import play_headphone_sequence, play_speaker_sequence, test_microphone_bip
-from functions.camera import camera_test_step
-from functions.device_info import fetch_device_info
-from functions.ethernet import ethernet_step
-from functions.gui import draw_text
-from functions.keyboard import keyboard_step
-from functions.ntp import consulta_ntp
-from functions.save_log import save_log
-from functions.screen import screen_step
-from functions.system_info import get_system_info
-from functions.tab_lock import disable_alt_tab, restore_alt_tab
-from functions.touchpad import touchpad_step
-from functions.usb import port_has_device
-from functions.video_ports import draw_video, get_video_status, init_video_state
-from functions.wifi import WiFiTest
+if __package__ in (None, ""):
+    project_root = Path(__file__).resolve().parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
+from src import app_state
+from src.functions.app_flow import prompt_password, start_step, wait_for_db_connection
+from src.functions.audio import play_headphone_sequence, play_speaker_sequence, test_microphone_bip
+from src.functions.camera import camera_test_step
+from src.functions.device_info import fetch_device_info
+from src.functions.ethernet import ethernet_step
+from src.functions.gui import draw_text
+from src.functions.keyboard import keyboard_step
+from src.functions.ntp import consulta_ntp
+from src.functions.save_log import save_log
+from src.functions.screen import screen_step
+from src.functions.system_info import get_system_info
+from src.functions.tab_lock import disable_alt_tab, restore_alt_tab
+from src.functions.touchpad import touchpad_step
+from src.functions.usb import port_has_device
+from src.functions.video_ports import draw_video, get_video_status, init_video_state
+from src.functions.wifi import WiFiTest
 
 
 def init_app_state():
@@ -204,7 +210,7 @@ def main():
         elif state == "HEADPHONE_STEP":
             app_state.add_log({"step": "HEADPHONE_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
             draw_text(["Conecte o headphone..."])
-            from functions.audio import headphone_connected
+            from src.functions.audio import headphone_connected
 
             if headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_CONNECT", "time": str(datetime.now()), "result": "APROVADO"})
@@ -218,7 +224,7 @@ def main():
 
         elif state == "HEADPHONE_REMOVE":
             draw_text(["Remova o headphone..."])
-            from functions.audio import headphone_connected
+            from src.functions.audio import headphone_connected
 
             if not headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_REMOVE", "time": str(datetime.now()), "result": "APROVADO"})
