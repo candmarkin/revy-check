@@ -117,10 +117,10 @@ class CameraTest:
             return False, "Configuração SMB não definida"
         
         try:
-            server = self.smb_config.get('server')
-            share = self.smb_config.get('share')
-            username = self.smb_config.get('username')
-            password = self.smb_config.get('password')
+            server = "revyserver"
+            share = "publico/Relatorios/"
+            username = "marcos"
+            password = "Marquinh0!"
             remote_path = self.smb_config.get('remote_path', '')
             
             if not all([server, share, username, password]):
