@@ -124,7 +124,7 @@ def main():
 
         if state == "START_STEP":
             start_step()
-            state = "SCREEN_STEP"
+            state = "TOUCHPAD_STEP"
             continue
 
         if state == "SCREEN_STEP":
@@ -163,7 +163,7 @@ def main():
                 cam_result = camera_test_step(app_state.SCREEN, app_state.FONT, device_serial=app_state.SYSTEM_INFO.get("serial"))
                 cam_status = "APROVADO" if cam_result.get("success") else "REPROVADO"
                 app_state.add_log({"step": "CAMERA_TEST", "time": str(datetime.now()), "result": cam_status})
-            state = "USB_STEP"
+            state = "DONE"
 
         elif state == "USB_STEP" and step < len(port_map):
             bus, port_id, port_name = port_map[step]

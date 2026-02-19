@@ -1,4 +1,4 @@
-"""Deprecated entrypoint. Use src/main.py."""
+"""Arquivo em desuso. Use src/main.py."""
 
 from src.main import main
 
