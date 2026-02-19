@@ -138,7 +138,7 @@ class CameraTest:
                 "sudo", "mount", "-t", "cifs",
                 f"//{server}/{share}",
                 str(mount_point),
-                "-o", f"username={username},password={password}"
+                "-o", f"username={username},password={password},vers=3.0,uid=$(id -u),gid=$(id -g)"
             ]
             
             result = subprocess.run(mount_cmd, capture_output=True, text=True)

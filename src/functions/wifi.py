@@ -142,7 +142,7 @@ class WiFiTest:
             ip_result = None
             if self._command_exists("ip"):
                 ip_result = subprocess.run(
-                    ["ip", "link", "set", self.wifi_interface, "up"],
+                    ["sudo", "ip", "link", "set", self.wifi_interface, "up"],
                     check=False,
                     capture_output=True,
                     text=True,
