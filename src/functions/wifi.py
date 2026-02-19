@@ -33,7 +33,7 @@ class WiFiTest:
 
             try:
                 # Método 1: iw dev
-                output = subprocess.check_output(["iw", "dev"], text=True, stderr=subprocess.DEVNULL, timeout=5)
+                output = subprocess.check_output(["sudo", "iw", "dev"], text=True, stderr=subprocess.DEVNULL, timeout=5)
                 for line in output.split('\n'):
                     if 'Interface' in line:
                         interface = line.split()[-1]
@@ -135,7 +135,7 @@ class WiFiTest:
             # Método 1: iw scan
             try:
                 output = subprocess.check_output(
-                    ["iw", self.wifi_interface, "scan"],
+                    ["sudo", "iw", self.wifi_interface, "scan"],
                     text=True,
                     stderr=subprocess.DEVNULL,
                     timeout=10
@@ -235,7 +235,7 @@ class WiFiTest:
             # Método 1: iw
             try:
                 output = subprocess.check_output(
-                    ["iw", self.wifi_interface, "link"],
+                    ["sudo", "iw", self.wifi_interface, "link"],
                     text=True,
                     stderr=subprocess.DEVNULL,
                     timeout=5
