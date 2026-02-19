@@ -333,15 +333,6 @@ if __name__ == "__main__":
     screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
     font = pygame.font.SysFont("Arial", 24)
     
-    # Configuração SMB de exemplo
-    smb_config = {
-        'server': '192.168.3.118',
-        'share': 'smbshare',
-        'username': 'Marcos',
-        'password': 'password',
-        'remote_path': 'cameras'
-    }
-    
     result = camera_test_step(screen, font, device_serial="TEST123", smb_config=smb_config)
     print(result)
     
