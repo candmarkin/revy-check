@@ -92,11 +92,14 @@ def wait_for_db_connection():
             pygame.quit()
             sys.exit(0)
         except Exception:
-            app_state.SCREEN.fill((0, 0, 0))
+            app_state.SCREEN.fill((rgb_val, rgb_val, rgb_val))
             text = app_state.FONT.render("Conecte-se à rede corporativa", True, (255, 255, 255))
             app_state.SCREEN.blit(text, ((app_state.WIDTH - text.get_width()) // 2, (app_state.HEIGHT - text.get_height()) // 2))
             pygame.display.flip()
             has_conn = False
+            rgb_val += 5
+            if rgb_val > 255:
+                rgb_val = 0
 
 
 def prompt_password():
