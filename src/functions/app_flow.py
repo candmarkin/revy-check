@@ -5,10 +5,10 @@ import pygame
 
 from src import app_state
 from src.functions.system_info import draw_system_info
-from dotenv import load_dotenv
-import os
+import dotenv.load_dotenv as loaddotenv
+from os import getenv
 
-load_dotenv()
+loaddotenv()
 
 def start_step():
     waiting = True
@@ -69,10 +69,10 @@ def start_step():
 def wait_for_db_connection():
     try:
         conn = mysql.connector.connect(
-            host=os.getenv("DB_HOST"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            database=os.getenv("DB_NAME"),
+            host=getenv("DB_HOST"),
+            user=getenv("DB_USER"),
+            password=getenv("DB_PASSWORD"),
+            database=getenv("DB_NAME"),
         )
         conn.close()
         has_conn = True
@@ -86,10 +86,10 @@ def wait_for_db_connection():
         rgb_val = 0
         try:
             conn = mysql.connector.connect(
-                host=os.getenv("DB_HOST"),
-                user=os.getenv("DB_USER"),
-                password=os.getenv("DB_PASSWORD"),
-                database=os.getenv("DB_NAME"),
+                host=getenv("DB_HOST"),
+                user=getenv("DB_USER"),
+                password=getenv("DB_PASSWORD"),
+                database=getenv("DB_NAME"),
             )
             conn.close()
             has_conn = True
