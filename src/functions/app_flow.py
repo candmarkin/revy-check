@@ -5,7 +5,10 @@ import pygame
 
 from src import app_state
 from src.functions.system_info import draw_system_info
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
 def start_step():
     waiting = True
@@ -66,10 +69,10 @@ def start_step():
 def wait_for_db_connection():
     try:
         conn = mysql.connector.connect(
-            host="revy.selbetti.com.br",
-            user="drack",
-            password="jdVg2dF2@",
-            database="revycheck",
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME"),
         )
         conn.close()
         has_conn = True
@@ -79,21 +82,20 @@ def wait_for_db_connection():
     if has_conn:
         return
 
-    while not has_conn:
+    while True:
+        rgb_val = 0
         try:
             conn = mysql.connector.connect(
-                host="revy.selbetti.com.br",
-                user="drack",
-                password="jdVg2dF2@",
-                database="revycheck",
+                host=os.getenv("DB_HOST"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                database=os.getenv("DB_NAME"),
             )
             conn.close()
             has_conn = True
-            pygame.quit()
-            sys.exit(0)
         except Exception:
             app_state.SCREEN.fill((rgb_val, rgb_val, rgb_val))
-            text = app_state.FONT.render("Conecte-se à rede corporativa", True, (255, 255, 255))
+            text = app_state.FONT.render("Conecte-se à rede corporativa (Desconecte e reconecte o cabo)", True, (255, 255, 255))
             app_state.SCREEN.blit(text, ((app_state.WIDTH - text.get_width()) // 2, (app_state.HEIGHT - text.get_height()) // 2))
             pygame.display.flip()
             has_conn = False
