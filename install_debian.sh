@@ -30,7 +30,6 @@ apt-get install -y \
     python3-pygame \
     python3-opencv \
     python3-numpy \
-    mysql-connector-python \
     python3-pulsectl \
     python3-sounddevice \
     python3-tk \
