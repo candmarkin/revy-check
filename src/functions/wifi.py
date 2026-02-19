@@ -30,27 +30,29 @@ class WiFiTest:
     def detect_wifi_interface(self):
         """Detecta a interface WiFi do sistema"""
         try:
-            # Método 1: iw dev
-            output = subprocess.check_output(["iw", "dev"], text=True, stderr=subprocess.DEVNULL, timeout=5)
-            for line in output.split('\n'):
-                if 'Interface' in line:
-                    interface = line.split()[-1]
-                    if interface.startswith('wl') or interface.startswith('wlan'):
-                        self.wifi_interface = interface
-                        self.has_wifi = True
-                        return True, interface
-            
-            # Método 2: ip link
-            if not self.wifi_interface:
-                output = subprocess.check_output(["ip", "link", "show"], text=True, timeout=5)
+
+            try:
+                # Método 1: iw dev
+                output = subprocess.check_output(["iw", "dev"], text=True, stderr=subprocess.DEVNULL, timeout=5)
                 for line in output.split('\n'):
-                    if 'wlan' in line or 'wlp' in line:
-                        match = re.search(r'\d+:\s+(\w+):', line)
-                        if match:
-                            self.wifi_interface = match.group(1)
+                    if 'Interface' in line:
+                        interface = line.split()[-1]
+                        if interface.startswith('wl') or interface.startswith('wlan'):
+                            self.wifi_interface = interface
                             self.has_wifi = True
-                            return True, self.wifi_interface
-            
+                            return True, interface
+            except subprocess.TimeoutExpired:
+                # Método 2: ip link
+                if not self.wifi_interface:
+                    output = subprocess.check_output(["ip", "link", "show"], text=True, timeout=5)
+                    for line in output.split('\n'):
+                        if 'wlan' in line or 'wlp' in line or 'wlo' in line:
+                            match = re.search(r'\d+:\s+(\w+):', line)
+                            if match:
+                                self.wifi_interface = match.group(1)
+                                self.has_wifi = True
+                                return True, self.wifi_interface
+                
             # Método 3: nmcli (NetworkManager)
             try:
                 output = subprocess.check_output(
