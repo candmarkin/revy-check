@@ -2,6 +2,7 @@ import pygame
 import subprocess
 import time
 import re
+import shutil
 from datetime import datetime
 
 class WiFiTest:
@@ -26,23 +27,52 @@ class WiFiTest:
         self.networks_found = []
         self.connected_network = None
         self.signal_strength = 0
+
+    def _command_exists(self, command):
+        return shutil.which(command) is not None
+
+    def _has_iw(self):
+        return self._command_exists("iw") or self._command_exists("sudo")
+
+    def _run_iw(self, args, timeout=5):
+        commands = []
+        if self._command_exists("iw"):
+            commands.append(["iw", *args])
+        if self._command_exists("sudo"):
+            commands.append(["sudo", "-n", "iw", *args])
+
+        last_error = None
+        for cmd in commands:
+            try:
+                return subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL, timeout=timeout)
+            except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+                last_error = exc
+                continue
+
+        if last_error:
+            raise last_error
+        raise FileNotFoundError("iw não disponível")
         
     def detect_wifi_interface(self):
         """Detecta a interface WiFi do sistema"""
         try:
             # Método 1: iw dev
-            output = subprocess.check_output(["iw", "dev"], text=True, stderr=subprocess.DEVNULL)
-            for line in output.split('\n'):
-                if 'Interface' in line:
-                    interface = line.split()[-1]
-                    if interface.startswith('wl') or interface.startswith('wlan'):
-                        self.wifi_interface = interface
-                        self.has_wifi = True
-                        return True, interface
+            if self._has_iw():
+                try:
+                    output = self._run_iw(["dev"], timeout=5)
+                    for line in output.split('\n'):
+                        if 'Interface' in line:
+                            interface = line.split()[-1]
+                            if interface.startswith('wl') or interface.startswith('wlan'):
+                                self.wifi_interface = interface
+                                self.has_wifi = True
+                                return True, interface
+                except:
+                    pass
             
             # Método 2: ip link
-            if not self.wifi_interface:
-                output = subprocess.check_output(["ip", "link", "show"], text=True)
+            if not self.wifi_interface and self._command_exists("ip"):
+                output = subprocess.check_output(["ip", "link", "show"], text=True, timeout=5)
                 for line in output.split('\n'):
                     if 'wlan' in line or 'wlp' in line:
                         match = re.search(r'\d+:\s+(\w+):', line)
@@ -52,21 +82,26 @@ class WiFiTest:
                             return True, self.wifi_interface
             
             # Método 3: nmcli (NetworkManager)
-            try:
-                output = subprocess.check_output(
-                    ["nmcli", "device", "status"], 
-                    text=True, 
-                    stderr=subprocess.DEVNULL
-                )
-                for line in output.split('\n')[1:]:
-                    if 'wifi' in line.lower():
-                        parts = line.split()
-                        if parts:
-                            self.wifi_interface = parts[0]
-                            self.has_wifi = True
-                            return True, self.wifi_interface
-            except:
-                pass
+            if self._command_exists("nmcli"):
+                try:
+                    output = subprocess.check_output(
+                        ["nmcli", "device", "status"], 
+                        text=True, 
+                        stderr=subprocess.DEVNULL,
+                        timeout=5
+                    )
+                    for line in output.split('\n')[1:]:
+                        if 'wifi' in line.lower():
+                            parts = line.split()
+                            if parts:
+                                self.wifi_interface = parts[0]
+                                self.has_wifi = True
+                                return True, self.wifi_interface
+                except:
+                    pass
+
+            if not (self._has_iw() or self._command_exists("ip") or self._command_exists("nmcli")):
+                return False, "Comandos WiFi não disponíveis (iw/ip/nmcli)"
             
             return False, "Nenhuma interface WiFi detectada"
             
@@ -80,12 +115,21 @@ class WiFiTest:
         
         try:
             # Verificar se a interface está UP
-            output = subprocess.check_output(
-                ["ip", "link", "show", self.wifi_interface], 
-                text=True
-            )
-            self.wifi_enabled = "UP" in output and "state UP" in output
-            return self.wifi_enabled
+            if self._command_exists("ip"):
+                output = subprocess.check_output(
+                    ["ip", "link", "show", self.wifi_interface], 
+                    text=True,
+                    timeout=5
+                )
+                self.wifi_enabled = "UP" in output and "state UP" in output
+                return self.wifi_enabled
+
+            if self._command_exists("nmcli"):
+                output = subprocess.check_output(["nmcli", "radio", "wifi"], text=True, timeout=5)
+                self.wifi_enabled = output.strip().lower() == "enabled"
+                return self.wifi_enabled
+
+            return False
         except:
             return False
     
@@ -95,14 +139,39 @@ class WiFiTest:
             return False, "Interface WiFi não detectada"
         
         try:
-            # Tentar com ip link
-            subprocess.run(
-                ["sudo", "ip", "link", "set", self.wifi_interface, "up"],
-                check=True,
-                capture_output=True
-            )
-            time.sleep(2)
-            return True, "WiFi habilitado"
+            ip_result = None
+            if self._command_exists("ip"):
+                ip_result = subprocess.run(
+                    ["sudo", "ip", "link", "set", self.wifi_interface, "up"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if ip_result.returncode == 0:
+                    time.sleep(2)
+                    return True, "WiFi habilitado"
+
+            nmcli_result = None
+            if self._command_exists("nmcli"):
+                nmcli_result = subprocess.run(
+                    ["nmcli", "radio", "wifi", "on"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if nmcli_result.returncode == 0:
+                    time.sleep(2)
+                    return True, "WiFi habilitado"
+
+            if not any(self._command_exists(cmd) for cmd in ("ip", "nmcli")):
+                return False, "Sem comando para habilitar WiFi (ip/nmcli)"
+
+            ip_error = ip_result.stderr.strip() if ip_result and ip_result.stderr else ""
+            nmcli_error = nmcli_result.stderr.strip() if nmcli_result and nmcli_result.stderr else ""
+            error_message = ip_error or nmcli_error or "Falha ao habilitar WiFi"
+            return False, error_message
         except Exception as e:
             return False, f"Erro ao habilitar WiFi: {str(e)}"
     
@@ -113,92 +182,90 @@ class WiFiTest:
         
         try:
             # Método 1: iw scan
-            try:
-                output = subprocess.check_output(
-                    ["sudo", "iw", self.wifi_interface, "scan"],
-                    text=True,
-                    stderr=subprocess.DEVNULL,
-                    timeout=10
-                )
+            if self._has_iw():
+                try:
+                    output = self._run_iw([self.wifi_interface, "scan"], timeout=10)
+
+                    networks = []
+                    current_network = {}
+
+                    for line in output.split('\n'):
+                        line = line.strip()
+
+                        if line.startswith('BSS'):
+                            if current_network:
+                                networks.append(current_network)
+                            current_network = {'bssid': line.split()[1].rstrip('(on')}
+
+                        elif 'SSID:' in line:
+                            ssid = line.split('SSID:', 1)[1].strip()
+                            if ssid:
+                                current_network['ssid'] = ssid
+
+                        elif 'signal:' in line:
+                            match = re.search(r'(-?\d+\.\d+)\s*dBm', line)
+                            if match:
+                                current_network['signal'] = float(match.group(1))
+
+                        elif 'freq:' in line:
+                            match = re.search(r'freq:\s*(\d+)', line)
+                            if match:
+                                freq = int(match.group(1))
+                                current_network['frequency'] = freq
+                                if freq >= 5000:
+                                    current_network['band'] = '5GHz'
+                                else:
+                                    current_network['band'] = '2.4GHz'
+
+                    if current_network and 'ssid' in current_network:
+                        networks.append(current_network)
+
+                    # Ordenar por sinal (mais forte primeiro)
+                    networks.sort(key=lambda x: x.get('signal', -100), reverse=True)
+                    self.networks_found = networks
+                    return True, networks
                 
-                networks = []
-                current_network = {}
-                
-                for line in output.split('\n'):
-                    line = line.strip()
-                    
-                    if line.startswith('BSS'):
-                        if current_network:
-                            networks.append(current_network)
-                        current_network = {'bssid': line.split()[1].rstrip('(on')}
-                    
-                    elif 'SSID:' in line:
-                        ssid = line.split('SSID:', 1)[1].strip()
-                        if ssid:
-                            current_network['ssid'] = ssid
-                    
-                    elif 'signal:' in line:
-                        match = re.search(r'(-?\d+\.\d+)\s*dBm', line)
-                        if match:
-                            current_network['signal'] = float(match.group(1))
-                    
-                    elif 'freq:' in line:
-                        match = re.search(r'freq:\s*(\d+)', line)
-                        if match:
-                            freq = int(match.group(1))
-                            current_network['frequency'] = freq
-                            if freq >= 5000:
-                                current_network['band'] = '5GHz'
-                            else:
-                                current_network['band'] = '2.4GHz'
-                
-                if current_network and 'ssid' in current_network:
-                    networks.append(current_network)
-                
-                # Ordenar por sinal (mais forte primeiro)
-                networks.sort(key=lambda x: x.get('signal', -100), reverse=True)
-                self.networks_found = networks
-                return True, networks
-                
-            except subprocess.TimeoutExpired:
-                return False, []
-            except:
-                pass
+                except subprocess.TimeoutExpired:
+                    return False, []
+                except:
+                    pass
             
             # Método 2: nmcli (NetworkManager)
-            try:
-                output = subprocess.check_output(
-                    ["nmcli", "-f", "SSID,SIGNAL,FREQ,BSSID", "device", "wifi", "list"],
-                    text=True,
-                    stderr=subprocess.DEVNULL
-                )
-                
-                networks = []
-                for line in output.split('\n')[1:]:
-                    if line.strip():
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            ssid = ' '.join(parts[:-3]) if len(parts) > 3 else parts[0]
-                            if ssid and ssid != '--':
-                                network = {
-                                    'ssid': ssid,
-                                    'signal': int(parts[-3]) if len(parts) >= 3 else 0,
-                                    'frequency': int(parts[-2]) if len(parts) >= 2 else 0,
-                                    'bssid': parts[-1] if len(parts) >= 1 else ''
-                                }
-                                
-                                if network['frequency'] >= 5000:
-                                    network['band'] = '5GHz'
-                                else:
-                                    network['band'] = '2.4GHz'
-                                
-                                networks.append(network)
-                
-                networks.sort(key=lambda x: x.get('signal', 0), reverse=True)
-                self.networks_found = networks
-                return True, networks
-            except:
-                pass
+            if self._command_exists("nmcli"):
+                try:
+                    output = subprocess.check_output(
+                        ["nmcli", "-f", "SSID,SIGNAL,FREQ,BSSID", "device", "wifi", "list"],
+                        text=True,
+                        stderr=subprocess.DEVNULL,
+                        timeout=10
+                    )
+
+                    networks = []
+                    for line in output.split('\n')[1:]:
+                        if line.strip():
+                            parts = line.split()
+                            if len(parts) >= 2:
+                                ssid = ' '.join(parts[:-3]) if len(parts) > 3 else parts[0]
+                                if ssid and ssid != '--':
+                                    network = {
+                                        'ssid': ssid,
+                                        'signal': int(parts[-3]) if len(parts) >= 3 else 0,
+                                        'frequency': int(parts[-2]) if len(parts) >= 2 else 0,
+                                        'bssid': parts[-1] if len(parts) >= 1 else ''
+                                    }
+
+                                    if network['frequency'] >= 5000:
+                                        network['band'] = '5GHz'
+                                    else:
+                                        network['band'] = '2.4GHz'
+
+                                    networks.append(network)
+
+                    networks.sort(key=lambda x: x.get('signal', 0), reverse=True)
+                    self.networks_found = networks
+                    return True, networks
+                except:
+                    pass
             
             return False, []
             
@@ -212,47 +279,46 @@ class WiFiTest:
         
         try:
             # Método 1: iw
-            try:
-                output = subprocess.check_output(
-                    ["iw", self.wifi_interface, "link"],
-                    text=True,
-                    stderr=subprocess.DEVNULL
-                )
-                
-                if "Not connected" in output:
-                    return None
-                
-                info = {}
-                for line in output.split('\n'):
-                    if 'SSID:' in line:
-                        info['ssid'] = line.split('SSID:', 1)[1].strip()
-                    elif 'signal:' in line:
-                        match = re.search(r'(-?\d+)\s*dBm', line)
-                        if match:
-                            info['signal'] = int(match.group(1))
-                
-                return info if info else None
-            except:
-                pass
+            if self._has_iw():
+                try:
+                    output = self._run_iw([self.wifi_interface, "link"], timeout=5)
+
+                    if "Not connected" in output:
+                        return None
+
+                    info = {}
+                    for line in output.split('\n'):
+                        if 'SSID:' in line:
+                            info['ssid'] = line.split('SSID:', 1)[1].strip()
+                        elif 'signal:' in line:
+                            match = re.search(r'(-?\d+)\s*dBm', line)
+                            if match:
+                                info['signal'] = int(match.group(1))
+
+                    return info if info else None
+                except:
+                    pass
             
             # Método 2: nmcli
-            try:
-                output = subprocess.check_output(
-                    ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL", "device", "wifi"],
-                    text=True,
-                    stderr=subprocess.DEVNULL
-                )
-                
-                for line in output.split('\n'):
-                    if line.startswith('yes:'):
-                        parts = line.split(':')
-                        if len(parts) >= 3:
-                            return {
-                                'ssid': parts[1],
-                                'signal': int(parts[2]) if parts[2].isdigit() else 0
-                            }
-            except:
-                pass
+            if self._command_exists("nmcli"):
+                try:
+                    output = subprocess.check_output(
+                        ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL", "device", "wifi"],
+                        text=True,
+                        stderr=subprocess.DEVNULL,
+                        timeout=5
+                    )
+
+                    for line in output.split('\n'):
+                        if line.startswith('yes:'):
+                            parts = line.split(':')
+                            if len(parts) >= 3:
+                                return {
+                                    'ssid': parts[1],
+                                    'signal': int(parts[2]) if parts[2].isdigit() else 0
+                                }
+                except:
+                    pass
             
             return None
             
@@ -420,6 +486,8 @@ class WiFiTest:
         running = True
         scanning = False
         approved = False
+        max_wait_seconds = 20
+        started_at = time.time()
         
         # Detectar interface WiFi
         has_wifi, info = self.detect_wifi_interface()
@@ -489,6 +557,7 @@ class WiFiTest:
                         
                         success, networks = self.scan_networks()
                         scanning = False
+                        started_at = time.time()
                         
                         message = f"{len(networks)} redes encontradas" if success else "Erro ao escanear"
                         message_color = (0, 255, 0) if len(networks) > 0 else (255, 0, 0)
@@ -508,6 +577,23 @@ class WiFiTest:
                         else:
                             message = "Escaneie redes antes de aprovar"
                             message_color = (255, 165, 0)
+
+            elapsed = time.time() - started_at
+            if elapsed >= max_wait_seconds:
+                if len(self.networks_found) > 0:
+                    return {
+                        'success': True,
+                        'message': f"WiFi OK - auto aprovação após {max_wait_seconds}s",
+                        'interface': self.wifi_interface,
+                        'networks_found': len(self.networks_found),
+                        'networks': self.networks_found[:5]
+                    }
+                return {
+                    'success': False,
+                    'message': f"Timeout no teste WiFi ({max_wait_seconds}s)",
+                    'interface': self.wifi_interface,
+                    'networks_found': len(self.networks_found)
+                }
             
             self.draw_ui(message, message_color, self.networks_found, scanning)
             clock.tick(30)

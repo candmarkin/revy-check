@@ -1,35 +1,38 @@
-import pygame
 import sys
-from functions.save_log import save_log
-from functions.gui import draw_text
+import time
 from datetime import datetime
+
+import pygame
+
+from src import app_state
+from src.functions.gui import draw_text
+from src.functions.save_log import save_log
+from src.functions.system_info import draw_system_info
 
 
 def screen_step():
-
-    from ..main import SCREEN, CLOCK, MODE, log_data
-    
     colors = [
-        (0, 0, 0),       # PRETO
-        (255, 255, 255), # BRANCO
-        (255, 0, 0),     # VERMELHO
-        (0, 255, 0),     # VERDE
-        (0, 0, 255),     # AZUL
-        (255, 255, 0),   # AMARELO
+        (0, 0, 0),
+        (255, 255, 255),
+        (255, 0, 0),
+        (0, 255, 0),
+        (0, 0, 255),
+        (255, 255, 0),
     ]
 
-
     color_index = 0
-
     running = True
     test_done = False
     approved = None
 
+    legend_font = pygame.font.SysFont("Arial", 18)
+    legend_text = "Pressione ENTER para alternar cores e ESPAÇO para finalizar o teste"
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                if MODE == "DEV":
-                    save_log(log_data)
+                if app_state.MODE == "DEV":
+                    save_log()
                     pygame.quit()
                     sys.exit()
 
@@ -38,10 +41,8 @@ def screen_step():
                     if event.key == pygame.K_RETURN:
                         color_index = (color_index + 1) % len(colors)
                     elif event.key == pygame.K_SPACE:
-                        SCREEN.fill((0, 0, 0))
-                        draw_text(["Teste concluído!",
-                                   "Aperte Y para APROVAR",
-                                   "ou N para REPROVAR"], (0, 255, 0))
+                        app_state.SCREEN.fill((0, 0, 0))
+                        draw_text(["Teste concluído!", "Aperte Y para APROVAR", "ou N para REPROVAR"], (0, 255, 0))
                         pygame.display.flip()
                         test_done = True
                 else:
@@ -53,12 +54,15 @@ def screen_step():
                         running = False
 
         if not test_done:
-            SCREEN.fill(colors[color_index])
+            app_state.SCREEN.fill(colors[color_index])
+            draw_system_info(app_state.SYSTEM_INFO)
+            legend_surface = legend_font.render(legend_text, True, (255, 255, 255))
+            legend_rect = legend_surface.get_rect()
+            legend_rect.topright = (app_state.WIDTH - 30, 20)
+            app_state.SCREEN.blit(legend_surface, legend_rect)
             pygame.display.flip()
 
-        CLOCK.tick(60)
+        app_state.CLOCK.tick(60)
 
-    # Grava resultado no log
     result = "APROVADO" if approved else "REPROVADO"
-    log_data.append({"step": "SCREEN_TEST", "time": str(datetime.now()), "result": result})
-    save_log(log_data)
+    app_state.add_log({"step": "SCREEN_TEST", "time": str(datetime.now()), "result": result})

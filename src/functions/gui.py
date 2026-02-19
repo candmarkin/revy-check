@@ -1,15 +1,22 @@
 import pygame
 
+from src import app_state
+from src.functions.system_info import draw_system_info
+
 
 def draw_text(lines, color=(255, 255, 255)):
+    if app_state.SCREEN is None:
+        return
 
-    from ..main import SCREEN, WIDTH, HEIGHT, FONT
+    app_state.SCREEN.fill((0, 0, 0))
 
-    SCREEN.fill((0, 0, 0))
-    y = HEIGHT // 3
+    # Informacoes do sistema
+    draw_system_info(app_state.SYSTEM_INFO)
+
+    y = app_state.HEIGHT // 3
     for text in lines:
-        rendered = FONT.render(text, True, color)
-        rect = rendered.get_rect(center=(WIDTH // 2, y))
-        SCREEN.blit(rendered, rect)
+        rendered = app_state.FONT.render(text, True, color)
+        rect = rendered.get_rect(center=(app_state.WIDTH // 2, y))
+        app_state.SCREEN.blit(rendered, rect)
         y += 50
     pygame.display.flip()

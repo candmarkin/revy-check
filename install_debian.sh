@@ -30,13 +30,9 @@ apt-get install -y \
     python3-pygame \
     python3-opencv \
     python3-numpy \
-    python3-mysql.connector \
     python3-pulsectl \
-    python3-sounddevice \
     python3-tk \
     cifs-utils \
-    ntpdate \
-    lsusb \
     usbutils \
     net-tools \
     alsa-utils \
@@ -45,7 +41,7 @@ apt-get install -y \
 
 echo ""
 echo "📦 Instalando dependências Python adicionais via pip..."
-pip3 install --break-system-packages mysql-connector-python ntplib || pip3 install mysql-connector-python ntplib
+pip3 install --break-system-packages -r requirements.txt || pip3 install mysql-connector-python ntplib
 
 echo ""
 echo "✅ Dependências instaladas!"

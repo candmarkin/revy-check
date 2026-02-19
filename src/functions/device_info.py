@@ -1,27 +1,33 @@
-import mysql.connector, subprocess, os
+import subprocess
 
-db_host = os.getenv("DB_HOST")
-db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
-db_database = os.getenv("DB_DATABASE")
+import mysql.connector
+
+from src.functions.cadastro import cadastro_portas
+
 
 def fetch_device_info():
     conn = mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database=db_database
+        host="revy.selbetti.com.br",
+        user="drack",
+        password="jdVg2dF2@",
+        database="revycheck",
     )
 
     try:
-        manufacturer = subprocess.check_output("dmidecode -s system-manufacturer", shell=True).strip().decode("utf-8")
+        manufacturer = subprocess.check_output(
+            "cat /sys/class/dmi/id/sys_vendor", shell=True
+        ).strip().decode("utf-8")
     except Exception:
         manufacturer = ""
     try:
         if "LENOVO" in str(manufacturer).upper():
-            productname = subprocess.check_output("dmidecode -s system-version", shell=True).strip().decode("utf-8")
+            productname = subprocess.check_output(
+                "cat /sys/class/dmi/id/product_version", shell=True
+            ).strip().decode("utf-8")
         else:
-            productname = subprocess.check_output("dmidecode -s system-product-name", shell=True).strip().decode("utf-8")
+            productname = subprocess.check_output(
+                "cat /sys/class/dmi/id/product_name", shell=True
+            ).strip().decode("utf-8")
     except Exception:
         productname = "UnknownDevice"
 
@@ -29,24 +35,30 @@ def fetch_device_info():
         cursor.execute("select id from devices where name=%s", (productname,))
         device = cursor.fetchone()
         if not device:
-            raise ValueError(f"Device '{productname}' not found in database.")
-        device_id = device['id']
+            print(f"Device '{productname}' not found in database.")
+            cadastro_portas()
+            return fetch_device_info()
+
+        device_id = device["id"]
         print(f"Device ID for '{productname}': {device_id}")
 
     with conn.cursor(dictionary=True, buffered=True) as cursor:
         cursor.execute("SELECT bus, port, label FROM device_usb_ports WHERE device_id=%s", (device_id,))
-        port_map = [(row['bus'], row['port'], row['label']) for row in cursor.fetchall()]
+        port_map = [(row["bus"], row["port"], row["label"]) for row in cursor.fetchall()]
 
     with conn.cursor(dictionary=True, buffered=True) as cursor:
         cursor.execute("SELECT label, entry FROM device_video_ports WHERE device_id=%s", (device_id,))
-        video_ports = [{"label": row['label'], "entry": row['entry']} for row in cursor.fetchall()]
+        video_ports = [{"label": row["label"], "entry": row["entry"]} for row in cursor.fetchall()]
 
     with conn.cursor(dictionary=True, buffered=True) as cursor:
         cursor.execute("SELECT * FROM devices WHERE id=%s", (device_id,))
         device = cursor.fetchone()
 
-    
+    conn.close()
+
     return {
+        "MANUFACTURER": manufacturer,
+        "PRODUCT_NAME": productname,
         "PORT_MAP": port_map,
         "VIDEO_PORTS": video_ports,
         "HAS_EMBEDDED_SCREEN": device.get("has_embedded_screen", False),
@@ -55,5 +67,8 @@ def fetch_device_info():
         "ETH_INTERFACE": device.get("eth_interface", "eth0"),
         "HAS_SPEAKER": device.get("has_speaker", False),
         "HAS_HEADPHONE_JACK": device.get("has_headphone_jack", False),
-        "HAS_MICROPHONE": device.get("has_microphone", False)
+        "HAS_MICROPHONE": device.get("has_microphone", False),
+        "HAS_WIFI": device.get("has_wifi", False),
+        "HAS_TOUCHPAD": device.get("has_touchpad", False),
+        "HAS_CAMERA": device.get("has_camera", False),
     }
