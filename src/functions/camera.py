@@ -136,9 +136,9 @@ class CameraTest:
             # Montar
             mount_cmd = [
                 "sudo", "mount", "-t", "cifs",
+                "-o", f"username={username},password='{password}',vers=3.0,uid=$(id -u),gid=$(id -g)",
                 f"//{server}/{share}",
-                str(mount_point),
-                "-o", f"username={username},password={password},vers=3.0,uid=$(id -u),gid=$(id -g)"
+                str(mount_point)
             ]
             
             result = subprocess.run(mount_cmd, capture_output=True, text=True)
