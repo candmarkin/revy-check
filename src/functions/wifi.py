@@ -30,20 +30,45 @@ class WiFiTest:
 
     def _command_exists(self, command):
         return shutil.which(command) is not None
+
+    def _has_iw(self):
+        return self._command_exists("iw") or self._command_exists("sudo")
+
+    def _run_iw(self, args, timeout=5):
+        commands = []
+        if self._command_exists("iw"):
+            commands.append(["iw", *args])
+        if self._command_exists("sudo"):
+            commands.append(["sudo", "-n", "iw", *args])
+
+        last_error = None
+        for cmd in commands:
+            try:
+                return subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL, timeout=timeout)
+            except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+                last_error = exc
+                continue
+
+        if last_error:
+            raise last_error
+        raise FileNotFoundError("iw não disponível")
         
     def detect_wifi_interface(self):
         """Detecta a interface WiFi do sistema"""
         try:
             # Método 1: iw dev
-            if self._command_exists("iw"):
-                output = subprocess.check_output(["iw", "dev"], text=True, stderr=subprocess.DEVNULL, timeout=5)
-                for line in output.split('\n'):
-                    if 'Interface' in line:
-                        interface = line.split()[-1]
-                        if interface.startswith('wl') or interface.startswith('wlan'):
-                            self.wifi_interface = interface
-                            self.has_wifi = True
-                            return True, interface
+            if self._has_iw():
+                try:
+                    output = self._run_iw(["dev"], timeout=5)
+                    for line in output.split('\n'):
+                        if 'Interface' in line:
+                            interface = line.split()[-1]
+                            if interface.startswith('wl') or interface.startswith('wlan'):
+                                self.wifi_interface = interface
+                                self.has_wifi = True
+                                return True, interface
+                except:
+                    pass
             
             # Método 2: ip link
             if not self.wifi_interface and self._command_exists("ip"):
@@ -75,7 +100,7 @@ class WiFiTest:
                 except:
                     pass
 
-            if not any(self._command_exists(cmd) for cmd in ("iw", "ip", "nmcli")):
+            if not (self._has_iw() or self._command_exists("ip") or self._command_exists("nmcli")):
                 return False, "Comandos WiFi não disponíveis (iw/ip/nmcli)"
             
             return False, "Nenhuma interface WiFi detectada"
@@ -157,14 +182,9 @@ class WiFiTest:
         
         try:
             # Método 1: iw scan
-            if self._command_exists("sudo iw"):
+            if self._has_iw():
                 try:
-                    output = subprocess.check_output(
-                        ["sudo", "iw", self.wifi_interface, "scan"],
-                        text=True,
-                        stderr=subprocess.DEVNULL,
-                        timeout=10
-                    )
+                    output = self._run_iw([self.wifi_interface, "scan"], timeout=10)
 
                     networks = []
                     current_network = {}
@@ -259,14 +279,9 @@ class WiFiTest:
         
         try:
             # Método 1: iw
-            if self._command_exists("iw"):
+            if self._has_iw():
                 try:
-                    output = subprocess.check_output(
-                        ["iw", self.wifi_interface, "link"],
-                        text=True,
-                        stderr=subprocess.DEVNULL,
-                        timeout=5
-                    )
+                    output = self._run_iw([self.wifi_interface, "link"], timeout=5)
 
                     if "Not connected" in output:
                         return None
