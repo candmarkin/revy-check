@@ -31,7 +31,7 @@ class WiFiTest:
         """Detecta a interface WiFi do sistema"""
         try:
             # Método 1: iw dev
-            output = subprocess.check_output(["iw", "dev"], text=True, stderr=subprocess.DEVNULL)
+            output = subprocess.check_output(["sudo", "iw", "dev"], text=True, stderr=subprocess.DEVNULL)
             for line in output.split('\n'):
                 if 'Interface' in line:
                     interface = line.split()[-1]
