@@ -120,6 +120,3 @@ def prompt_password():
                 else:
                     input_text += event.unicode
     return input_text
-
-if __name__ == "__main__":
-    wait_for_db_connection()
