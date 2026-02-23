@@ -15,9 +15,9 @@ def wait_for_db_connection(max_retries=5, retry_delay=3):
     for attempt in range(max_retries):
         try:
             conn = mysql.connector.connect(
-                host="revy.selbetti.com.br",
+                host="10.3.0.12",
                 user="drack",
-                password="dR@ck#2024!",
+                password="jdVg2dF2@",
                 database="revycheck"
             )
             print(f"✅ Conectado ao banco de dados (tentativa {attempt + 1})")

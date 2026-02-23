@@ -169,7 +169,7 @@ def cadastro_portas():
     db_conn = None
 
     while not connected:
-        db_cfg["host"] = "revy.selbetti.com.br"
+        db_cfg["host"] = "10.3.0.12"
         db_cfg["port"] = 3306
         db_cfg["user"] = "drack"
         db_cfg["password"] = "jdVg2dF2@"
