@@ -62,7 +62,7 @@ def save_log():
 
     try:
         conn2 = mysql.connector.connect(
-            host="revy.selbetti.com.br",
+            host="10.3.0.12",
             user="drack",
             password="jdVg2dF2@",
             database="revycheck",
