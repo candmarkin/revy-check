@@ -211,6 +211,20 @@ def main():
             app_state.add_log({"step": "HEADPHONE_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
             draw_text(["Conecte o headphone..."])
             from src.functions.audio import headphone_connected
+            if app_state.MODE == "DEV":
+                dev_font = pygame.font.SysFont("Consolas", 12)
+                y = app_state.HEIGHT // 2 + 50
+                # Mostra o sinklist
+                try:
+                    import pulsectl
+                    pulse = pulsectl.Pulse("headphone-monitor-dev")
+                    sinks = pulse.sink_list()
+                    for sink in sinks:
+                        port_name = sink.port_active.name if sink.port_active else "No active port"
+                        text_surf = dev_font.render(f"Sink: {sink.name}, Port: {port_name}", True, (0, 255, 0))
+                        app_state.SCREEN.blit(text_surf, (50, y))
+                        y += 20
+                    pygame.display.flip()
 
             if headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_CONNECT", "time": str(datetime.now()), "result": "APROVADO"})
