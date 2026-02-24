@@ -225,6 +225,10 @@ def main():
                         app_state.SCREEN.blit(text_surf, (50, y))
                         y += 20
                     pygame.display.flip()
+                except Exception as e:
+                    error_surf = dev_font.render(f"Error accessing PulseAudio: {e}", True, (255, 0, 0))
+                    app_state.SCREEN.blit(error_surf, (50, y))
+                    pygame.display.flip()
 
             if headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_CONNECT", "time": str(datetime.now()), "result": "APROVADO"})
