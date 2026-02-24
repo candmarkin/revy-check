@@ -13,7 +13,7 @@ if __package__ in (None, ""):
 
 from src import app_state
 from src.functions.app_flow import prompt_password, start_step, wait_for_db_connection
-from src.functions.audio import play_headphone_sequence, play_speaker_sequence, test_microphone_bip
+from src.functions.audio import play_headphone_sequence, play_speaker_sequence, test_microphone_bip, headphone_connected
 from src.functions.camera import camera_test_step
 from src.functions.device_info import fetch_device_info
 from src.functions.ethernet import ethernet_step
@@ -210,26 +210,6 @@ def main():
         elif state == "HEADPHONE_STEP":
             app_state.add_log({"step": "HEADPHONE_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
             draw_text(["Conecte o headphone..."])
-            from src.functions.audio import headphone_connected
-            if app_state.MODE == "DEV":
-                dev_font = pygame.font.SysFont("Consolas", 12)
-                y = app_state.HEIGHT // 2 + 50
-                # Mostra o sinklist
-                try:
-                    import pulsectl
-                    pulse = pulsectl.Pulse("headphone-monitor-dev")
-                    sinks = pulse.sink_list()
-                    for sink in sinks:
-                        port_name = sink.port_active.name if sink.port_active else "No active port"
-                        text_surf = dev_font.render(f"Sink: {sink.name}, Port: {port_name}", True, (0, 255, 0))
-                        app_state.SCREEN.blit(text_surf, (50, y))
-                        y += 20
-                    pygame.display.flip()
-                except Exception as e:
-                    error_surf = dev_font.render(f"Error accessing PulseAudio: {e}", True, (255, 0, 0))
-                    app_state.SCREEN.blit(error_surf, (50, y))
-                    pygame.display.flip()
-
             if headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_CONNECT", "time": str(datetime.now()), "result": "APROVADO"})
                 state = "HEADPHONE_TESTING"
@@ -242,8 +222,6 @@ def main():
 
         elif state == "HEADPHONE_REMOVE":
             draw_text(["Remova o headphone..."])
-            from src.functions.audio import headphone_connected
-
             if not headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_REMOVE", "time": str(datetime.now()), "result": "APROVADO"})
                 state = "SPEAKER_STEP"
