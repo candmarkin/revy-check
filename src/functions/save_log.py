@@ -60,54 +60,90 @@ def save_log():
         time.sleep(2)
         return "Envio cancelado"
 
-    try:
-        conn2 = mysql.connector.connect(
-            host="10.3.0.12",
-            user="drack",
-            password="jdVg2dF2@",
-            database="revycheck",
-        )
-        cursor = conn2.cursor()
+    def try_save_log_to_db():
+        conn2 = None
+        cursor = None
 
         try:
-            device_serial = subprocess.check_output(
-                "cat /sys/class/dmi/id/product_serial", shell=True
-            ).strip().decode("utf-8")
-        except Exception:
-            device_serial = "unknown"
-
-        for entry in app_state.LOG_DATA:
-            step = entry.get("step", "")
-            time_str = entry.get("time", None)
-            if time_str:
-                try:
-                    time_val = datetime.fromisoformat(time_str)
-                except Exception:
-                    time_val = datetime.now()
-            else:
-                time_val = datetime.now()
-            approved = entry.get("result", "REPROVADO") == "APROVADO"
-
-            cursor.execute(
-                "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
-                (device_serial, step, time_val, approved),
+            conn2 = mysql.connector.connect(
+                host="10.3.0.12",
+                user="drack",
+                password="jdVg2dF2@",
+                database="revycheck",
             )
+            cursor = conn2.cursor()
 
-        conn2.commit()
-        cursor.close()
-        conn2.close()
-        draw_text(["✅ Log salvo com sucesso!"], (0, 180, 0))
-        time.sleep(2)
-        return "Log salvo com sucesso!"
+            try:
+                device_serial = subprocess.check_output(
+                    "cat /sys/class/dmi/id/product_serial", shell=True
+                ).strip().decode("utf-8")
+            except Exception:
+                device_serial = "unknown"
 
-    except Exception as e:
-        color = (255, 0, 0)
-        if app_state.MODE == "DEV":
-            msg = f"Erro ao salvar log no BD:\n{e}"
-        else:
-            msg = "Erro ao salvar log no BD!"
+            for entry in app_state.LOG_DATA:
+                step = entry.get("step", "")
+                time_str = entry.get("time", None)
+                if time_str:
+                    try:
+                        time_val = datetime.fromisoformat(time_str)
+                    except Exception:
+                        time_val = datetime.now()
+                else:
+                    time_val = datetime.now()
+                approved = entry.get("result", "REPROVADO") == "APROVADO"
+
+                cursor.execute(
+                    "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
+                    (device_serial, step, time_val, approved),
+                )
+
+            conn2.commit()
+            return True, "Log salvo com sucesso!"
+        except Exception as e:
+            return False, str(e)
+        finally:
+            if cursor is not None:
+                cursor.close()
+            if conn2 is not None:
+                conn2.close()
+
+    while True:
+        success, result = try_save_log_to_db()
+
+        if success:
+            draw_text(["✅ Log salvo com sucesso!"], (0, 180, 0))
+            time.sleep(2)
+            return result
+
         app_state.SCREEN.fill((255, 255, 255))
-        draw_text([msg], color)
+        retry_font = pygame.font.SysFont("Arial", 14, bold=True)
+        retry_btn = pygame.Rect(app_state.WIDTH // 2 - 160, app_state.HEIGHT - 80, 140, 50)
+        cancel_retry_btn = pygame.Rect(app_state.WIDTH // 2 + 20, app_state.HEIGHT - 80, 140, 50)
+
+        if app_state.MODE == "DEV":
+            msg_lines = ["Erro ao salvar log no BD:", str(result)]
+        else:
+            msg_lines = ["Erro ao salvar log no BD!"]
+
+        draw_text(msg_lines, (255, 0, 0))
+
+        pygame.draw.rect(app_state.SCREEN, (0, 120, 220), retry_btn, border_radius=10)
+        pygame.draw.rect(app_state.SCREEN, (200, 0, 0), cancel_retry_btn, border_radius=10)
+        app_state.SCREEN.blit(retry_font.render("Tentar novamente", True, (255, 255, 255)), retry_btn.move(14, 10))
+        app_state.SCREEN.blit(retry_font.render("Cancelar", True, (255, 255, 255)), cancel_retry_btn.move(20, 10))
         pygame.display.flip()
-        time.sleep(3)
-        return str(e)
+
+        retry_waiting = True
+        while retry_waiting:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if retry_btn.collidepoint(event.pos):
+                        retry_waiting = False
+                    elif cancel_retry_btn.collidepoint(event.pos):
+                        draw_text(["❌ Envio cancelado após falha."], (200, 0, 0))
+                        time.sleep(2)
+                        return result
+            app_state.CLOCK.tick(30)
