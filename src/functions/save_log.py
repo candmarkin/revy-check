@@ -60,7 +60,7 @@ def save_log():
         time.sleep(2)
         return "Envio cancelado"
 
-    def try_save_log_to_db():
+    def try_save_log_to_db(force_error=False):
         conn2 = None
         cursor = None
 
@@ -74,7 +74,8 @@ def save_log():
             cursor = conn2.cursor()
             
             # fake error for testing retry logic
-            raise Exception("Simulated database error for testing")
+            if force_error:
+                raise Exception("Simulated database error for testing")
 
             try:
                 device_serial = subprocess.check_output(
@@ -110,24 +111,38 @@ def save_log():
             if conn2 is not None:
                 conn2.close()
 
+    # Retry loop: user can click 'Tentar novamente' to attempt save; show status while attempting
+    attempt = 1
     while True:
-        success, result = try_save_log_to_db()
+        # Attempt to save only after user requests a retry (or first auto-attempt)
+        # Show saving status before attempting so user sees change
+        saving_msg = [f"Salvando no banco de dados...", f"Tentativa {attempt}"]
+        draw_text(saving_msg, (0, 120, 220))
+        pygame.display.flip()
+
+        # Let the event queue process so UI stays responsive
+        pygame.event.pump()
+
+        success, result = try_save_log_to_db(force_error=False)
 
         if success:
             draw_text(["✅ Log salvo com sucesso!"], (0, 180, 0))
             time.sleep(2)
             return result
 
+        # Failed - show error and present retry/cancel buttons with updated message
         app_state.SCREEN.fill((255, 255, 255))
         retry_font = pygame.font.SysFont("Arial", 14, bold=True)
         retry_btn = pygame.Rect(app_state.WIDTH // 2 - 160, app_state.HEIGHT - 80, 140, 50)
         cancel_retry_btn = pygame.Rect(app_state.WIDTH // 2 + 20, app_state.HEIGHT - 80, 140, 50)
 
         if app_state.MODE == "DEV":
-            msg_lines = ["Erro ao salvar log no BD:", str(result)]
+            msg_lines = ["Erro ao salvar log no BD:", str(result), "Clique em 'Tentar novamente' para nova tentativa."]
         else:
-            msg_lines = ["Erro ao salvar log no BD!"]
+            msg_lines = ["Erro ao salvar log no BD!", "Clique em 'Tentar novamente' para nova tentativa."]
 
+        # Display error lines plus attempt counter
+        msg_lines.append(f"Tentativa: {attempt}")
         draw_text(msg_lines, (255, 0, 0))
 
         pygame.draw.rect(app_state.SCREEN, (0, 120, 220), retry_btn, border_radius=10)
@@ -136,6 +151,7 @@ def save_log():
         app_state.SCREEN.blit(retry_font.render("Cancelar", True, (255, 255, 255)), cancel_retry_btn.move(20, 10))
         pygame.display.flip()
 
+        # Wait for user action (retry or cancel)
         retry_waiting = True
         while retry_waiting:
             for event in pygame.event.get():
@@ -149,4 +165,13 @@ def save_log():
                         draw_text(["❌ Envio cancelado após falha."], (200, 0, 0))
                         time.sleep(2)
                         return result
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        retry_waiting = False
+                    elif event.key == pygame.K_ESCAPE:
+                        draw_text(["❌ Envio cancelado após falha."], (200, 0, 0))
+                        time.sleep(2)
+                        return result
             app_state.CLOCK.tick(30)
+
+        attempt += 1
