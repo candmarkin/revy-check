@@ -72,6 +72,9 @@ def save_log():
             database="revycheck",
         )
             cursor = conn2.cursor()
+            
+            # fake error for testing retry logic
+            raise Exception("Simulated database error for testing")
 
             try:
                 device_serial = subprocess.check_output(
