@@ -7,9 +7,9 @@ from src.functions.cadastro import cadastro_portas
 
 def fetch_device_info():
     conn = mysql.connector.connect(
-        host="10.3.0.12",
+        host="revycheck.mysql.uhserver.com",
         user="drack",
-        password="jdVg2dF2@",
+        password="AkonShowLA2002@",
         database="revycheck",
     )
 
