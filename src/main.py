@@ -13,7 +13,7 @@ if __package__ in (None, ""):
 
 from src import app_state
 from src.functions.app_flow import prompt_password, start_step, wait_for_db_connection
-from src.functions.audio import play_headphone_sequence, play_speaker_sequence, test_microphone_bip, headphone_connected
+from src.functions.audio import play_headphone_sequence, play_speaker_sequence, test_microphone_bip
 from src.functions.camera import camera_test_step
 from src.functions.device_info import fetch_device_info
 from src.functions.ethernet import ethernet_step
@@ -33,15 +33,51 @@ from src.functions.wifi import WiFiTest
 def init_app_state():
     app_state.MODE = "PROD"
     app_state.DEV_PASSWORD = "dev123"
+    # Initialize pygame subsystems with defensive fallbacks and logging
+    print("[init] Inicializando pygame...")
+    try:
+        pygame.init()
+        print("[init] pygame.init() OK")
+    except Exception as e:
+        print(f"[init][ERROR] pygame.init() falhou: {e}")
 
-    pygame.init()
-    info = pygame.display.Info()
-    app_state.WIDTH, app_state.HEIGHT = info.current_w, info.current_h
-    app_state.SCREEN = pygame.display.set_mode((app_state.WIDTH, app_state.HEIGHT), pygame.FULLSCREEN)
-    pygame.display.set_caption("Checklist Técnico Completo")
-    pygame.mouse.set_visible(True)
-    app_state.FONT = pygame.font.SysFont("Arial", 20)
-    app_state.CLOCK = pygame.time.Clock()
+    # Try to create a display; if fullscreen fails, fall back to windowed mode
+    try:
+        info = pygame.display.Info()
+        app_state.WIDTH, app_state.HEIGHT = info.current_w or 1024, info.current_h or 768
+        try:
+            app_state.SCREEN = pygame.display.set_mode((app_state.WIDTH, app_state.HEIGHT), pygame.FULLSCREEN)
+            print(f"[init] display modo FULLSCREEN {app_state.WIDTH}x{app_state.HEIGHT}")
+        except Exception as e:
+            print(f"[init][WARN] Falha ao setar FULLSCREEN: {e}. Tentando modo janela...")
+            app_state.WIDTH, app_state.HEIGHT = 1024, 768
+            app_state.SCREEN = pygame.display.set_mode((app_state.WIDTH, app_state.HEIGHT))
+            print(f"[init] display modo WINDOW {app_state.WIDTH}x{app_state.HEIGHT}")
+    except Exception as e:
+        print(f"[init][ERROR] Falha ao inicializar display: {e}")
+        # Provide reasonable defaults to avoid None errors later
+        app_state.WIDTH, app_state.HEIGHT = 1024, 768
+        app_state.SCREEN = None
+
+    try:
+        pygame.display.set_caption("Checklist Técnico Completo")
+    except Exception:
+        pass
+
+    try:
+        pygame.mouse.set_visible(True)
+    except Exception:
+        pass
+
+    try:
+        app_state.FONT = pygame.font.SysFont("Arial", 20)
+    except Exception:
+        app_state.FONT = None
+
+    try:
+        app_state.CLOCK = pygame.time.Clock()
+    except Exception:
+        app_state.CLOCK = None
 
     app_state.COLORS = {
         "WHITE": (240, 240, 240),
@@ -50,9 +86,63 @@ def init_app_state():
         "GREEN": (0, 200, 0),
     }
 
-    pygame.mixer.init(frequency=44100, size=-16, channels=2)
+    # audio subsystem - non-fatal on failure
+    try:
+        pygame.mixer.init(frequency=44100, size=-16, channels=2)
+        print("[init] mixer OK")
+    except Exception as e:
+        print(f"[init][WARN] pygame.mixer.init() falhou: {e} - continuar sem áudio")
 
     app_state.DEV_HOTKEY = {pygame.K_LCTRL, pygame.K_LSHIFT, pygame.K_d, pygame.K_v}
+
+
+def manual_approve(steps_to_override):
+    """Show an on-screen 'Aprovar' button and, when clicked or ENTER pressed,
+    add APROVADO logs for the given step names and return True.
+    This is used in non-DEV mode to force-approve failed tests and continue.
+    """
+    btn_w, btn_h = 220, 50
+    btn_rect = pygame.Rect(app_state.WIDTH - btn_w - 20, app_state.HEIGHT - btn_h - 20, btn_w, btn_h)
+    font = pygame.font.SysFont("Arial", 20)
+
+    waiting = True
+    while waiting:
+        
+        # Draw overlay and button
+        overlay = pygame.Surface((app_state.WIDTH, app_state.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 120))
+        app_state.SCREEN.blit(overlay, (0, 0))
+
+        info_text = font.render("Teste falhou. Você pode aprovar manualmente e seguir adiante", True, (255, 255, 255))
+        app_state.SCREEN.blit(info_text, (50, app_state.HEIGHT - 80))
+
+        pygame.draw.rect(app_state.SCREEN, (0, 150, 0), btn_rect, border_radius=8)
+        txt = font.render("Aprovar e continuar", True, (255, 255, 255))
+        app_state.SCREEN.blit(txt, txt.get_rect(center=btn_rect.center))
+
+        pygame.display.flip()
+
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                if app_state.MODE == "DEV":
+                    save_log()
+                    pygame.quit()
+                    sys.exit()
+            elif ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_RETURN:
+                    for step_name in steps_to_override:
+                        app_state.add_log({"step": step_name + "_MANUAL_APPROVE", "time": str(datetime.now()), "result": "APROVADO"})
+                    return True
+                elif ev.key == pygame.K_ESCAPE:
+                    # Do not approve, just return False
+                    return False
+            elif ev.type == pygame.MOUSEBUTTONDOWN:
+                if ev.button == 1 and btn_rect.collidepoint(ev.pos):
+                    for step_name in steps_to_override:
+                        app_state.add_log({"step": step_name + "_MANUAL_APPROVE", "time": str(datetime.now()), "result": "APROVADO"})
+                    return True
+
+        app_state.CLOCK.tick(30)
 
 
 def main():
@@ -143,9 +233,16 @@ def main():
             if has_touchpad:
                 app_state.add_log({"step": "TOUCHPAD_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
                 results = touchpad_step()
+                failed = []
                 for entry in results:
-                    result = "REPROVADO" if entry.get("step") == "TOUCHPAD_REPROVED" else "APROVADO"
+                    is_failed = entry.get("step") == "TOUCHPAD_REPROVED" or entry.get("result") == "REPROVADO"
+                    result = "REPROVADO" if is_failed else "APROVADO"
                     app_state.add_log({"step": entry.get("step"), "time": entry.get("time"), "result": result})
+                    if is_failed:
+                        failed.append(entry.get("step"))
+                # Allow manual override in non-DEV mode
+                if failed and app_state.MODE != "DEV":
+                    manual_approve(failed)
             state = "WIFI_STEP"
 
         elif state == "WIFI_STEP":
@@ -155,6 +252,8 @@ def main():
                 result = wifi_test.run()
                 wifi_result = "APROVADO" if result.get("success") else "REPROVADO"
                 app_state.add_log({"step": "WIFI_TEST", "time": str(datetime.now()), "result": wifi_result})
+                if wifi_result == "REPROVADO" and app_state.MODE != "DEV":
+                    manual_approve(["WIFI_TEST"])
             state = "CAMERA_STEP"
 
         elif state == "CAMERA_STEP":
@@ -203,6 +302,10 @@ def main():
                 for output in outputs:
                     result = "APROVADO" if output["aprovado"] else "REPROVADO"
                     app_state.add_log({"step": f"VIDEO_{output['name']}_TEST", "time": str(datetime.now()), "result": result})
+                # If any output failed, allow manual approval in non-DEV mode
+                failed_outputs = [output['name'] for output in outputs if not output.get('aprovado')]
+                if failed_outputs and app_state.MODE != "DEV":
+                    manual_approve([f"VIDEO_{name}_TEST" for name in failed_outputs])
                 draw_text(["Video test ok!"], (0, 255, 0))
                 time.sleep(1)
                 state = "HEADPHONE_STEP" if has_headphone else "SPEAKER_STEP"
@@ -210,6 +313,26 @@ def main():
         elif state == "HEADPHONE_STEP":
             app_state.add_log({"step": "HEADPHONE_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
             draw_text(["Conecte o headphone..."])
+            from src.functions.audio import headphone_connected
+            if app_state.MODE == "DEV":
+                dev_font = pygame.font.SysFont("Consolas", 12)
+                y = app_state.HEIGHT // 2 + 50
+                # Mostra o sinklist
+                try:
+                    import pulsectl
+                    pulse = pulsectl.Pulse("headphone-monitor-dev")
+                    sinks = pulse.sink_list()
+                    for sink in sinks:
+                        port_name = sink.port_active.name if sink.port_active else "No active port"
+                        text_surf = dev_font.render(f"Sink: {sink.name}, Port: {port_name}", True, (0, 255, 0))
+                        app_state.SCREEN.blit(text_surf, (50, y))
+                        y += 20
+                    pygame.display.flip()
+                except Exception as e:
+                    error_surf = dev_font.render(f"Error accessing PulseAudio: {e}", True, (255, 0, 0))
+                    app_state.SCREEN.blit(error_surf, (50, y))
+                    pygame.display.flip()
+
             if headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_CONNECT", "time": str(datetime.now()), "result": "APROVADO"})
                 state = "HEADPHONE_TESTING"
@@ -222,6 +345,8 @@ def main():
 
         elif state == "HEADPHONE_REMOVE":
             draw_text(["Remova o headphone..."])
+            from src.functions.audio import headphone_connected
+
             if not headphone_connected():
                 app_state.add_log({"step": "HEADPHONE_REMOVE", "time": str(datetime.now()), "result": "APROVADO"})
                 state = "SPEAKER_STEP"
