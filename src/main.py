@@ -221,7 +221,7 @@ def main():
             if has_screen:
                 app_state.add_log({"step": "SCREEN_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
                 screen_step()
-            state = "KEYBOARD_STEP"
+            state = "DONE"
 
         if state == "KEYBOARD_STEP":
             if has_keyboard:
