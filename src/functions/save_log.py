@@ -66,11 +66,11 @@ def save_log():
 
         try:
             conn2 = mysql.connector.connect(
-                host="10.3.0.12",
-                user="drack",
-                password="jdVg2dF2@",
-                database="revycheck",
-            )
+            host="revycheck.mysql.uhserver.com",
+            user="drack",
+            password="AkonShowLA2002@",
+            database="revycheck",
+        )
             cursor = conn2.cursor()
 
             try:
