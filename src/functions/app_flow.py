@@ -65,9 +65,9 @@ def start_step():
 def wait_for_db_connection():
     try:
         conn = mysql.connector.connect(
-            host="revycheck.mysql.uhserver.com",
+            host="10.3.0.12",
             user="drack",
-            password="AkonShowLA2002@",
+            password="jdVg2dF2@",
             database="revycheck",
         )
         conn.close()
@@ -82,9 +82,9 @@ def wait_for_db_connection():
         rgb_val = 0
         try:
             conn = mysql.connector.connect(
-            host="revycheck.mysql.uhserver.com",
+            host="10.3.0.12",
             user="drack",
-            password="AkonShowLA2002@",
+            password="jdVg2dF2@",
             database="revycheck",
         )
             conn.close()

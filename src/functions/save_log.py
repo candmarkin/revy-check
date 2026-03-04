@@ -66,9 +66,9 @@ def save_log():
 
         try:
             conn2 = mysql.connector.connect(
-            host="revycheck.mysql.uhserver.com",
+            host="10.3.0.12",
             user="drack",
-            password="AkonShowLA2002@",
+            password="jdVg2dF2@",
             database="revycheck",
         )
             cursor = conn2.cursor()
@@ -123,7 +123,7 @@ def save_log():
         # Let the event queue process so UI stays responsive
         pygame.event.pump()
 
-        success, result = try_save_log_to_db(force_error=True if attempt == 1 else False)
+        success, result = try_save_log_to_db(force_error=False)
 
         if success:
             draw_text(["✅ Log salvo com sucesso!"], (0, 180, 0))
