@@ -499,6 +499,7 @@ class WiFiTest:
         running = True
         scanning = False
         approved = False
+        has_scanned = False
         max_wait_seconds = 20
         started_at = time.time()
         
@@ -576,6 +577,7 @@ class WiFiTest:
                         
                         success, networks = self.scan_networks()
                         scanning = False
+                        has_scanned = True
                         started_at = time.time()
                         
                         message = f"{len(networks)} redes encontradas" if success else "Erro ao escanear"
@@ -583,7 +585,10 @@ class WiFiTest:
                     
                     elif event.key == pygame.K_RETURN:
                         # Aprovar teste
-                        if len(self.networks_found) > 0:
+                        if not has_scanned:
+                            message = "Pressione ESPAÇO para escanear antes de aprovar"
+                            message_color = (255, 165, 0)
+                        elif len(self.networks_found) > 0:
                             approved = True
                             running = False
                             return {
