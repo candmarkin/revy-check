@@ -550,20 +550,22 @@ class WiFiTest:
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    fail_message = "WiFi REPROVADO - Cancelado pelo usuário"
+                    self.hold_failure_screen(fail_message, (255, 0, 0), self.networks_found)
                     return {
                         'success': False,
-                        'message': "Cancelado pelo usuário",
+                        'message': fail_message,
                         'interface': self.wifi_interface,
                         'networks_found': len(self.networks_found)
                     }
                 
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        running = False
+                        fail_message = "WiFi REPROVADO - Cancelado pelo usuário"
+                        self.hold_failure_screen(fail_message, (255, 0, 0), self.networks_found)
                         return {
                             'success': False,
-                            'message': "Cancelado pelo usuário",
+                            'message': fail_message,
                             'interface': self.wifi_interface,
                             'networks_found': len(self.networks_found)
                         }
@@ -603,15 +605,7 @@ class WiFiTest:
                             message_color = (255, 165, 0)
 
             elapsed = time.time() - started_at
-            if elapsed >= max_wait_seconds:
-                if len(self.networks_found) > 0:
-                    return {
-                        'success': True,
-                        'message': f"WiFi OK - auto aprovação após {max_wait_seconds}s",
-                        'interface': self.wifi_interface,
-                        'networks_found': len(self.networks_found),
-                        'networks': self.networks_found[:5]
-                    }
+            if elapsed >= max_wait_seconds and not has_scanned:
                 fail_message = f"WiFi REPROVADO - Timeout no teste WiFi ({max_wait_seconds}s)"
                 self.hold_failure_screen(fail_message, (255, 0, 0), self.networks_found)
                 return {
