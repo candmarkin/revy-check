@@ -464,7 +464,7 @@ class WiFiTest:
         instructions = [
             "ESPAÇO - Escanear redes",
             "ENTER - Aprovar teste",
-            "ESC - Cancelar"
+            "ESC - Reprovar teste / Sair"
         ]
         
         y_inst = self.height - 100
@@ -474,6 +474,19 @@ class WiFiTest:
             y_inst += 25
         
         pygame.display.flip()
+
+    def hold_failure_screen(self, message, color=(255, 0, 0), networks=None):
+        """Mantém a tela de falha ativa até o usuário sair manualmente."""
+        clock = pygame.time.Clock()
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    return
+
+            self.draw_ui(message, color, networks, scanning=False)
+            clock.tick(30)
     
     def run(self):
         """
@@ -493,11 +506,11 @@ class WiFiTest:
         has_wifi, info = self.detect_wifi_interface()
         
         if not has_wifi:
-            self.draw_ui(info, (255, 0, 0))
-            pygame.time.wait(3000)
+            fail_message = f"WiFi REPROVADO - {info}"
+            self.hold_failure_screen(fail_message, (255, 0, 0))
             return {
                 'success': False,
-                'message': info,
+                'message': fail_message,
                 'interface': None,
                 'networks_found': 0
             }
@@ -513,8 +526,14 @@ class WiFiTest:
                 self.wifi_enabled = True
                 self.check_wifi_status()
             else:
-                self.draw_ui(msg, (255, 0, 0))
-                pygame.time.wait(3000)
+                fail_message = f"WiFi REPROVADO - {msg}"
+                self.hold_failure_screen(fail_message, (255, 0, 0))
+                return {
+                    'success': False,
+                    'message': fail_message,
+                    'interface': self.wifi_interface,
+                    'networks_found': len(self.networks_found)
+                }
         
         # Fazer scan inicial
         self.draw_ui("Escaneando redes WiFi...", (255, 255, 0))
@@ -588,9 +607,11 @@ class WiFiTest:
                         'networks_found': len(self.networks_found),
                         'networks': self.networks_found[:5]
                     }
+                fail_message = f"WiFi REPROVADO - Timeout no teste WiFi ({max_wait_seconds}s)"
+                self.hold_failure_screen(fail_message, (255, 0, 0), self.networks_found)
                 return {
                     'success': False,
-                    'message': f"Timeout no teste WiFi ({max_wait_seconds}s)",
+                    'message': fail_message,
                     'interface': self.wifi_interface,
                     'networks_found': len(self.networks_found)
                 }
