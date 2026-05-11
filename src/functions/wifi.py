@@ -482,8 +482,6 @@ class WiFiTest:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    return
 
             self.draw_ui(message, color, networks, scanning=False)
             clock.tick(30)
