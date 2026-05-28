@@ -45,6 +45,13 @@ def get_system_info():
     except Exception:
         info["disk"] = "N/A"
 
+    try:
+        info["ip"] = subprocess.check_output(
+            "hostname -I | awk '{print $1}'", shell=True
+        ).decode("utf-8").strip()
+    except Exception:
+        info["ip"] = "N/A"
+
     return info
 
 
@@ -60,6 +67,7 @@ def draw_system_info(system_info):
         f"CPU: {system_info.get('cpu', 'N/A')}",
         f"RAM: {system_info.get('ram', 'N/A')}",
         f"DISK: {system_info.get('disk', 'N/A')}",
+        f"IP: {system_info.get('ip', 'N/A')}",
     ]
 
     for line in lines:
