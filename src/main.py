@@ -165,35 +165,42 @@ def main():
                 app_state.add_log({"step": "CAMERA_TEST", "time": str(datetime.now()), "result": cam_status})
             state = "USB_STEP"
 
-        elif state == "USB_STEP" and step < len(port_map):
-            bus, port_id, port_name = port_map[step]
-            if not waiting_remove:
-                app_state.add_log({"step": f"USB_CONNECT_TEST_START_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                draw_text([f"Conecte o pendrive na {port_name}..."])
-                if app_state.MODE == "DEV":
-                    lsusb_output = subprocess.check_output(["lsusb", "-t"], text=True)
-                    dev_font = pygame.font.SysFont("Consolas", 12)
-                    y = app_state.HEIGHT // 2 + 50
-                    for line in lsusb_output.splitlines():
-                        text_surf = dev_font.render(line, True, (0, 255, 0))
-                        app_state.SCREEN.blit(text_surf, (50, y))
-                        y += 20
-                    pygame.display.flip()
-
-                if port_has_device(bus, port_id):
-                    waiting_remove = True
-                    app_state.add_log({"step": f"USB_CONNECT_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                    time.sleep(0.5)
-            else:
-                draw_text([f"Remova o pendrive da {port_name}..."])
-                app_state.add_log({"step": f"USB_REMOVE_TEST_START{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                if not port_has_device(bus, port_id):
-                    step += 1
-                    waiting_remove = False
-                    app_state.add_log({"step": f"USB_REMOVE_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                    time.sleep(0.5)
+        elif state == "USB_STEP":
             if step >= len(port_map):
+                if not port_map:
+                    app_state.add_log({"step": "USB_TEST_SKIPPED", "time": str(datetime.now()), "result": "APROVADO"})
+                    draw_text(["Nenhuma porta USB cadastrada para este equipamento.", "Pulando teste de USB..."], (255, 200, 0))
+                    time.sleep(2)
                 state = "VIDEO_STEP"
+            else:
+                bus, port_id, port_name = port_map[step]
+                if not waiting_remove:
+                    app_state.add_log({"step": f"USB_CONNECT_TEST_START_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                    draw_text([f"Conecte o pendrive na {port_name}..."])
+                    if app_state.MODE == "DEV":
+                        lsusb_output = subprocess.check_output(["lsusb", "-t"], text=True)
+                        dev_font = pygame.font.SysFont("Consolas", 12)
+                        y = app_state.HEIGHT // 2 + 50
+                        for line in lsusb_output.splitlines():
+                            text_surf = dev_font.render(line, True, (0, 255, 0))
+                            app_state.SCREEN.blit(text_surf, (50, y))
+                            y += 20
+                        pygame.display.flip()
+
+                    if port_has_device(bus, port_id):
+                        waiting_remove = True
+                        app_state.add_log({"step": f"USB_CONNECT_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                        time.sleep(0.5)
+                else:
+                    draw_text([f"Remova o pendrive da {port_name}..."])
+                    app_state.add_log({"step": f"USB_REMOVE_TEST_START{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                    if not port_has_device(bus, port_id):
+                        step += 1
+                        waiting_remove = False
+                        app_state.add_log({"step": f"USB_REMOVE_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                        time.sleep(0.5)
+                if step >= len(port_map):
+                    state = "VIDEO_STEP"
 
         elif state == "VIDEO_STEP":
             app_state.add_log({"step": "VIDEO_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
@@ -255,6 +262,10 @@ def main():
             time.sleep(5)
             running = False
 
+        # Apresenta o frame do loop principal. Sem isso, os estados que nao
+        # desenham nada (equipamento sem tela/teclado/touchpad/wifi/camera)
+        # deixam a tela congelada no ultimo frame de outra etapa.
+        pygame.display.flip()
         app_state.CLOCK.tick(10)
 
 
