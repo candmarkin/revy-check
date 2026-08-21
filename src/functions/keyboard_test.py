@@ -213,10 +213,11 @@ def keyboard_step(screen, width, height, font, clock, manufacturer, mode_dict, d
                     sys.exit()
 
             elif event.type == pygame.KEYDOWN:
-                if manufacturer == "LENOVO":
-                    if event.key == 1073742052:  # Tecla / do lenovo
-                        pressed_keys.add(pygame.K_SLASH)
-                        already_pressed.append(pygame.K_SLASH)
+                # 1073742052 = keycode do Ctrl direito, que varios teclados
+                # mandam na tecla /. Aceito em qualquer fabricante.
+                if event.key == 1073742052:
+                    pressed_keys.add(pygame.K_SLASH)
+                    already_pressed.append(pygame.K_SLASH)
                 
                 pressed_keys.add(event.key)
                 already_pressed.append(event.key)

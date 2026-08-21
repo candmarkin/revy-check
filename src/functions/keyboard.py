@@ -16,7 +16,7 @@ K_ACUTE = 1073741824  # ´ - scancode 47, a direita do P
 K_TILDE = 1073741824  # ~ - scancode 52, a direita do Ç
 K_CEDILLA = 231  # Ç - scancode 51
 K_FN = 1073741951  # Fn
-K_RCTRL = 1073742052  # Ctrl direito; no LENOVO ocupa a posicao da tecla /
+K_RCTRL = 1073742052  # Ctrl direito; em varios teclados ocupa a posicao da tecla /
 
 # Segurar ESC por esse tempo reprova o teclado. E' segurando, e nao apertando,
 # porque a propria tecla Esc faz parte do teste e precisa continuar clicavel.
@@ -329,10 +329,12 @@ def keyboard_step():
                     sys.exit()
 
             elif event.type == pygame.KEYDOWN:
-                if app_state.CONFIG.get("MANUFACTURER") == "LENOVO":
-                    if event.key == K_RCTRL:
-                        pressed_keys.add(pygame.K_SLASH)
-                        already_pressed.add(pygame.K_SLASH)
+                # A tecla / manda ora K_SLASH, ora o keycode do Ctrl direito,
+                # dependendo do teclado. Os dois valem: o layout nao tem Ctrl
+                # direito, entao nenhuma outra tecla depende desse codigo.
+                if event.key == K_RCTRL:
+                    pressed_keys.add(pygame.K_SLASH)
+                    already_pressed.add(pygame.K_SLASH)
 
                 if event.key == pygame.K_ESCAPE and esc_down_at is None:
                     esc_down_at = pygame.time.get_ticks()
