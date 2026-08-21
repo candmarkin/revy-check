@@ -12,8 +12,8 @@ from src.functions.save_log import save_log
 
 # Teclas do ABNT2 que o pygame nao expoe como constante. Os valores vem de
 # keycodes.json, capturado na bancada por scripts/collect_keycodes.py.
-K_ACUTE = 180  # ´ - scancode 47, a direita do P
-K_TILDE = 126  # ~ - scancode 52, a direita do Ç
+K_ACUTE = 1073741824  # ´ - scancode 47, a direita do P
+K_TILDE = 1073741824  # ~ - scancode 52, a direita do Ç
 K_CEDILLA = 231  # Ç - scancode 51
 K_FN = 1073741951  # Fn
 K_RCTRL = 1073742052  # Ctrl direito; no LENOVO ocupa a posicao da tecla /
