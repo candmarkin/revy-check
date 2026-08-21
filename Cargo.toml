@@ -1,0 +1,11 @@
+# Rust rewrite of revy-check (Python/Pygame -> Rust, Linux + Windows).
+# The Python tree stays in place until this reaches parity; see
+# .claude/plans/converte-esse-com-versoes-hidden-riddle.md for the migration plan.
+[workspace]
+resolver = "2"
+members = ["crates/revy-platform", "crates/revy-check"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "proprietary"

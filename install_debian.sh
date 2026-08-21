@@ -40,6 +40,17 @@ apt-get install -y \
     sudo
 
 echo ""
+echo "📦 Instalando firmware (non-free-firmware)..."
+# Sem estes blobs o amdgpu falha o early_init e /sys/class/drm fica vazio:
+# nenhum connector, nenhum teste de video possivel. Vale para qualquer maquina
+# AMD (Renoir, Green Sardine, Cezanne...) que entre na linha de vistoria.
+apt-get install -y \
+    firmware-amd-graphics \
+    firmware-misc-nonfree \
+    firmware-iwlwifi \
+    firmware-realtek
+
+echo ""
 echo "📦 Instalando dependências Python adicionais via pip..."
 pip3 install --break-system-packages -r requirements.txt || pip3 install mysql-connector-python ntplib
 

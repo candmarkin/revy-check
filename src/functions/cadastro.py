@@ -5,6 +5,16 @@ import mysql.connector
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 
+from src.functions.hw_paths import (
+    cpu_vendor,
+    drm_connector_name,
+    drm_connector_status,
+    drm_connectors,
+    is_internal_panel,
+    mass_storage_port_ids,
+    mass_storage_ports,
+)
+
 
 def has_pendrive_connected_cd():
     try:
@@ -94,6 +104,7 @@ def try_connect_db(cfg):
 def send_to_db(
     conn,
     productname,
+    vendor,
     has_screen,
     has_keyboard,
     has_eth,
@@ -111,13 +122,14 @@ def send_to_db(
     try:
         insert_device = (
             "INSERT INTO devices "
-            "(name, type, has_embedded_screen, has_embedded_keyboard, has_ethernet, "
+            "(name, cpu_vendor, type, has_embedded_screen, has_embedded_keyboard, has_ethernet, "
             "eth_interface, has_speaker, has_headphone_jack, has_microphone, "
             "has_wifi, has_touchpad, has_camera) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         )
         device_vals = (
             productname,
+            vendor,
             "Notebook",
             1 if has_screen else 0,
             1 if has_keyboard else 0,
@@ -211,6 +223,10 @@ def cadastro_portas():
     except Exception:
         productname = "UnknownDevice"
 
+    # Distingue as variantes Intel e AMD do mesmo modelo comercial: o DMI e'
+    # identico nas duas, mas a topologia USB e os connectors DRM nao sao.
+    vendor = cpu_vendor()
+
     port_map = []
     video_ports = []
 
@@ -250,47 +266,36 @@ def cadastro_portas():
     while new_video_port:
         wait_for_ok(f"Conecte o cabo de vídeo na porta {new_video_port} e clique em OK...")
 
-        while True:
-            try:
-                videoports = subprocess.check_output("ls /sys/class/drm/", shell=True).decode("utf-8").split()
-                videoports = [port for port in videoports if "-" in port]
-                for port in videoports:
-                    try:
-                        isconnected = subprocess.check_output(
-                            f"cat /sys/class/drm/{port}/status", shell=True
-                        ).decode("utf-8").strip()
-                    except Exception:
-                        isconnected = ""
-                    if (
-                        isconnected == "connected"
-                        and port not in [v.get("entry") for v in video_ports]
-                        and port != "card0-eDP-1"
-                    ):
-                        confirm = messagebox.askyesno(
-                            "Confirmação",
-                            f"Porta detectada: {port}\nLabel: {new_video_port}\n\nConfirmar cadastro?",
-                        )
-                        if confirm:
-                            video_ports.append({"label": new_video_port, "entry": port})
-                            wait_for_ok(
-                                "Porta de vídeo cadastrada com sucesso!\n\nRemova todos os cabos de vídeo conectados..."
-                            )
-                            while True:
-                                try:
-                                    if port == "card1-eDP-1":
-                                        break
-                                    still_connected = subprocess.check_output(
-                                        f"cat /sys/class/drm/{port}/status", shell=True
-                                    ).decode("utf-8").strip()
-                                except Exception:
-                                    still_connected = ""
-                                if still_connected == "connected":
-                                    time.sleep(1)
-                                else:
-                                    break
-            except Exception:
-                pass
+        if not drm_connectors():
+            messagebox.showerror(
+                "Sem driver de vídeo",
+                "Nenhum connector em /sys/class/drm: o driver de vídeo não carregou.\n\n"
+                "Verifique com: dmesg | grep -i 'firmware load'\n\n"
+                "Não é possível cadastrar portas de vídeo neste estado.",
+            )
             break
+
+        # As entradas sao gravadas sem o prefixo 'cardN-': o indice do card muda
+        # conforme o driver que carregou (i915, amdgpu, simpledrm) e ate' entre
+        # boots da mesma maquina.
+        ja_cadastrados = {v.get("entry") for v in video_ports}
+        for path in drm_connectors():
+            connector = drm_connector_name(path)
+            if is_internal_panel(connector) or connector in ja_cadastrados:
+                continue
+            if drm_connector_status(connector) != "connected":
+                continue
+            confirm = messagebox.askyesno(
+                "Confirmação",
+                f"Porta detectada: {connector}\nLabel: {new_video_port}\n\nConfirmar cadastro?",
+            )
+            if confirm:
+                video_ports.append({"label": new_video_port, "entry": connector})
+                wait_for_ok(
+                    "Porta de vídeo cadastrada com sucesso!\n\nRemova todos os cabos de vídeo conectados..."
+                )
+                while drm_connector_status(connector) == "connected":
+                    time.sleep(1)
         new_video_port = ask_text("Dê um nome para a próxima porta de vídeo (ou vazio para finalizar)")
 
     messagebox.showinfo(
@@ -302,31 +307,36 @@ def cadastro_portas():
     while new_port:
         wait_for_ok(f"Conecte o pendrive na porta {new_port} e clique em OK...")
 
-        try:
-            output = subprocess.check_output(["lsusb", "-t"], text=True)
-            for bus_string in output.split("/:"):
-                bus_list = bus_string.splitlines()
-                for line in bus_list:
-                    if "Class=Mass Storage" in line and "Bus 002.Port 001" not in bus_list[bus_list.index(line) - 1]:
-                        try:
-                            port_id = line.split(":")[0].split()[-1]
-                        except Exception:
-                            port_id = "unknown"
-                        try:
-                            bus = bus_string.splitlines()[0].split(":")[0].strip()
-                        except Exception:
-                            bus = "unknown"
-                        confirm = messagebox.askyesno(
-                            "Confirmação",
-                            f"Bus: {bus}\nPorta: {port_id}\nLabel: {new_port}\n\nConfirmar cadastro?",
-                        )
-                        if confirm:
-                            port_map.append({"bus": bus, "port": f"Port {port_id}:", "label": new_port})
-                            wait_for_ok(
-                                "Porta cadastrada com sucesso!\n\nRemova todos os pendrives conectados..."
-                            )
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao executar lsusb: {e}")
+        # A porta e' identificada pelo caminho fisico no sysfs, nao pelo texto
+        # do `lsusb -t`: os numeros de bus mudam entre variantes Intel e AMD do
+        # mesmo modelo e chegam a mudar entre boots, conforme a ordem de probe
+        # dos controladores xHCI.
+        ja_cadastradas = {f"{p['bus']}/{p['port']}" for p in port_map}
+        encontradas = mass_storage_ports()
+        detectadas = sorted(pid for pid in encontradas if pid not in ja_cadastradas)
+
+        if not detectadas:
+            messagebox.showwarning(
+                "Nada detectado",
+                "Nenhum pendrive novo encontrado.\n\n"
+                "Confirme que o dispositivo está conectado e é de armazenamento.",
+            )
+
+        for port_id in detectadas:
+            controlador, cadeia = port_id.split("/", 1)
+            # O painel vem do ACPI _PLD (kernel >= 5.18) e ajuda o operador a
+            # conferir se rotulou o lado certo; nem toda maquina preenche.
+            painel = encontradas.get(port_id)
+            lado = f"Lado (ACPI): {painel}" if painel else "Lado (ACPI): nao informado"
+            confirm = messagebox.askyesno(
+                "Confirmação",
+                f"Controlador: {controlador}\nPorta física: {cadeia}\n{lado}\nLabel: {new_port}\n\nConfirmar cadastro?",
+            )
+            if confirm:
+                port_map.append({"bus": controlador, "port": cadeia, "label": new_port})
+                wait_for_ok("Porta cadastrada com sucesso!\n\nRemova todos os pendrives conectados...")
+                while port_id in mass_storage_port_ids():
+                    time.sleep(1)
 
         new_port = ask_text("Dê um nome para a próxima porta (ou vazio para finalizar)")
 
@@ -347,6 +357,7 @@ def cadastro_portas():
     resumo += f"\nCamera? {'Sim' if has_camera else 'Não'}"
     resumo += f"\nInterface Ethernet: {eth_interface}"
     resumo += f"\nNome do produto: {productname}"
+    resumo += f"\nCPU: {vendor or 'desconhecida'}"
 
     confirm = messagebox.askyesno("Resumo", resumo + "\n\nEstá tudo correto?")
 
@@ -354,6 +365,7 @@ def cadastro_portas():
         success, err = send_to_db(
             db_conn,
             productname,
+            vendor,
             has_screen,
             has_keyboard,
             has_eth,

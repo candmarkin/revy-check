@@ -1,0 +1,27 @@
+[package]
+name = "revy-check"
+version.workspace = true
+edition.workspace = true
+default-run = "revy-check"
+
+[[bin]]
+name = "revy-check"
+path = "src/main.rs"
+
+[dependencies]
+revy-platform = { path = "../revy-platform" }
+macroquad = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+env_logger = "0.11"
+anyhow = "1"
+
+# Phase 4 (audio + camera):
+# rodio = "0.19"
+# cpal = "0.15"
+# nokhwa = { version = "0.10", features = ["input-native"] }
+# Phase 5 (DB + NTP):
+# mysql = "25"
+# sntpc = "0.5"
