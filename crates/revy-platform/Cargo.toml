@@ -1,0 +1,31 @@
+[package]
+name = "revy-platform"
+version.workspace = true
+edition.workspace = true
+
+# OS-abstraction layer. Traits live in `api`, the concrete implementation is
+# selected at compile time. Phase 1 ships only `MockPlatform`; the real Linux
+# (sysfs/CLI) and Windows (WMI/WinAPI) impls land in Phases 2 and 3, which is
+# where the target-specific dependencies below get uncommented.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+log = "0.4"
+chrono = "0.4"
+
+# Phase 2 (Linux): clock_settime replaces the `sudo date` shell-out.
+# [target.'cfg(target_os = "linux")'.dependencies]
+# nix = { version = "0.29", features = ["time"] }
+
+# Phase 3 (Windows): WMI system info, wlanapi wifi, SetSystemTime, LL keyboard hook.
+# [target.'cfg(target_os = "windows")'.dependencies]
+# wmi = "0.14"
+# windows = { version = "0.58", features = [
+#   "Win32_System_Time",
+#   "Win32_NetworkManagement_WiFi",
+#   "Win32_NetworkManagement_IpHelper",
+#   "Win32_Devices_DeviceAndDriverInstallation",
+#   "Win32_Devices_Display",
+#   "Win32_Media_Audio",
+#   "Win32_UI_WindowsAndMessaging",
+# ] }

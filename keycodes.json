@@ -1,0 +1,737 @@
+{
+  "27": {
+    "pygame_key": 27,
+    "scancode": 41,
+    "name": "escape",
+    "unicode": "\u001b",
+    "time": 1781101462.2477312
+  },
+  "1073741882": {
+    "pygame_key": 1073741882,
+    "scancode": 58,
+    "name": "f1",
+    "unicode": "",
+    "time": 1781101464.5405698
+  },
+  "1073741883": {
+    "pygame_key": 1073741883,
+    "scancode": 59,
+    "name": "f2",
+    "unicode": "",
+    "time": 1781101465.2235167
+  },
+  "1073741884": {
+    "pygame_key": 1073741884,
+    "scancode": 60,
+    "name": "f3",
+    "unicode": "",
+    "time": 1781101465.9053082
+  },
+  "1073741885": {
+    "pygame_key": 1073741885,
+    "scancode": 61,
+    "name": "f4",
+    "unicode": "",
+    "time": 1781101467.6496067
+  },
+  "1073741886": {
+    "pygame_key": 1073741886,
+    "scancode": 62,
+    "name": "f5",
+    "unicode": "",
+    "time": 1781101468.2465029
+  },
+  "1073741887": {
+    "pygame_key": 1073741887,
+    "scancode": 63,
+    "name": "f6",
+    "unicode": "",
+    "time": 1781101468.5972548
+  },
+  "1073741888": {
+    "pygame_key": 1073741888,
+    "scancode": 64,
+    "name": "f7",
+    "unicode": "",
+    "time": 1781101470.5626664
+  },
+  "1073741889": {
+    "pygame_key": 1073741889,
+    "scancode": 65,
+    "name": "f8",
+    "unicode": "",
+    "time": 1781101470.8581266
+  },
+  "1073741890": {
+    "pygame_key": 1073741890,
+    "scancode": 66,
+    "name": "f9",
+    "unicode": "",
+    "time": 1781101471.8525379
+  },
+  "1073741891": {
+    "pygame_key": 1073741891,
+    "scancode": 67,
+    "name": "f10",
+    "unicode": "",
+    "time": 1781101472.0952387
+  },
+  "1073741892": {
+    "pygame_key": 1073741892,
+    "scancode": 68,
+    "name": "f11",
+    "unicode": "",
+    "time": 1781101472.3957236
+  },
+  "1073741893": {
+    "pygame_key": 1073741893,
+    "scancode": 69,
+    "name": "f12",
+    "unicode": "",
+    "time": 1781101473.7771502
+  },
+  "1073741894": {
+    "pygame_key": 1073741894,
+    "scancode": 70,
+    "name": "print screen",
+    "unicode": "",
+    "time": 1781101474.2987542
+  },
+  "1073741895": {
+    "pygame_key": 1073741895,
+    "scancode": 71,
+    "name": "scroll lock",
+    "unicode": "",
+    "time": 1781101474.478649
+  },
+  "39": {
+    "pygame_key": 39,
+    "scancode": 53,
+    "name": "'",
+    "unicode": "'",
+    "time": 1781101479.653446
+  },
+  "49": {
+    "pygame_key": 49,
+    "scancode": 30,
+    "name": "1",
+    "unicode": "1",
+    "time": 1781101479.8683476
+  },
+  "50": {
+    "pygame_key": 50,
+    "scancode": 31,
+    "name": "2",
+    "unicode": "2",
+    "time": 1781101479.9336944
+  },
+  "51": {
+    "pygame_key": 51,
+    "scancode": 32,
+    "name": "3",
+    "unicode": "3",
+    "time": 1781101480.0015721
+  },
+  "52": {
+    "pygame_key": 52,
+    "scancode": 33,
+    "name": "4",
+    "unicode": "4",
+    "time": 1781101480.0505333
+  },
+  "53": {
+    "pygame_key": 53,
+    "scancode": 34,
+    "name": "5",
+    "unicode": "5",
+    "time": 1781101480.1173143
+  },
+  "54": {
+    "pygame_key": 54,
+    "scancode": 35,
+    "name": "6",
+    "unicode": "6",
+    "time": 1781101480.1822937
+  },
+  "55": {
+    "pygame_key": 55,
+    "scancode": 36,
+    "name": "7",
+    "unicode": "7",
+    "time": 1781101480.263934
+  },
+  "56": {
+    "pygame_key": 56,
+    "scancode": 37,
+    "name": "8",
+    "unicode": "8",
+    "time": 1781101480.3309028
+  },
+  "57": {
+    "pygame_key": 57,
+    "scancode": 38,
+    "name": "9",
+    "unicode": "9",
+    "time": 1781101480.4144773
+  },
+  "48": {
+    "pygame_key": 48,
+    "scancode": 39,
+    "name": "0",
+    "unicode": "0",
+    "time": 1781101480.4969077
+  },
+  "45": {
+    "pygame_key": 45,
+    "scancode": 45,
+    "name": "-",
+    "unicode": "-",
+    "time": 1781101480.6321745
+  },
+  "61": {
+    "pygame_key": 61,
+    "scancode": 46,
+    "name": "=",
+    "unicode": "=",
+    "time": 1781101480.764528
+  },
+  "8": {
+    "pygame_key": 8,
+    "scancode": 42,
+    "name": "backspace",
+    "unicode": "\b",
+    "time": 1781101480.8977368
+  },
+  "9": {
+    "pygame_key": 9,
+    "scancode": 43,
+    "name": "tab",
+    "unicode": "\t",
+    "time": 1781101481.6268847
+  },
+  "113": {
+    "pygame_key": 113,
+    "scancode": 20,
+    "name": "q",
+    "unicode": "q",
+    "time": 1781101481.7448246
+  },
+  "119": {
+    "pygame_key": 119,
+    "scancode": 26,
+    "name": "w",
+    "unicode": "w",
+    "time": 1781101481.7936783
+  },
+  "101": {
+    "pygame_key": 101,
+    "scancode": 8,
+    "name": "e",
+    "unicode": "e",
+    "time": 1781101481.8439794
+  },
+  "114": {
+    "pygame_key": 114,
+    "scancode": 21,
+    "name": "r",
+    "unicode": "r",
+    "time": 1781101481.876337
+  },
+  "116": {
+    "pygame_key": 116,
+    "scancode": 23,
+    "name": "t",
+    "unicode": "t",
+    "time": 1781101481.9407256
+  },
+  "121": {
+    "pygame_key": 121,
+    "scancode": 28,
+    "name": "y",
+    "unicode": "y",
+    "time": 1781101481.9749296
+  },
+  "117": {
+    "pygame_key": 117,
+    "scancode": 24,
+    "name": "u",
+    "unicode": "u",
+    "time": 1781101482.0423157
+  },
+  "105": {
+    "pygame_key": 105,
+    "scancode": 12,
+    "name": "i",
+    "unicode": "i",
+    "time": 1781101482.108319
+  },
+  "111": {
+    "pygame_key": 111,
+    "scancode": 18,
+    "name": "o",
+    "unicode": "o",
+    "time": 1781101482.1733763
+  },
+  "112": {
+    "pygame_key": 112,
+    "scancode": 19,
+    "name": "p",
+    "unicode": "p",
+    "time": 1781101482.206496
+  },
+  "180": {
+    "pygame_key": 180,
+    "scancode": 47,
+    "name": "",
+    "unicode": "",
+    "time": 1781101482.2724164
+  },
+  "91": {
+    "pygame_key": 91,
+    "scancode": 48,
+    "name": "[",
+    "unicode": "´",
+    "time": 1781101482.3386006
+  },
+  "13": {
+    "pygame_key": 13,
+    "scancode": 40,
+    "name": "return",
+    "unicode": "\r",
+    "time": 1781101482.4064512
+  },
+  "1073741881": {
+    "pygame_key": 1073741881,
+    "scancode": 57,
+    "name": "caps lock",
+    "unicode": "",
+    "time": 1781101482.9328327
+  },
+  "97": {
+    "pygame_key": 97,
+    "scancode": 4,
+    "name": "a",
+    "unicode": "A",
+    "time": 1781101483.0856442
+  },
+  "115": {
+    "pygame_key": 115,
+    "scancode": 22,
+    "name": "s",
+    "unicode": "S",
+    "time": 1781101483.1366608
+  },
+  "100": {
+    "pygame_key": 100,
+    "scancode": 7,
+    "name": "d",
+    "unicode": "D",
+    "time": 1781101483.1696558
+  },
+  "102": {
+    "pygame_key": 102,
+    "scancode": 9,
+    "name": "f",
+    "unicode": "F",
+    "time": 1781101483.2191494
+  },
+  "103": {
+    "pygame_key": 103,
+    "scancode": 10,
+    "name": "g",
+    "unicode": "G",
+    "time": 1781101483.2860885
+  },
+  "104": {
+    "pygame_key": 104,
+    "scancode": 11,
+    "name": "h",
+    "unicode": "H",
+    "time": 1781101483.3535028
+  },
+  "106": {
+    "pygame_key": 106,
+    "scancode": 13,
+    "name": "j",
+    "unicode": "J",
+    "time": 1781101483.3855283
+  },
+  "107": {
+    "pygame_key": 107,
+    "scancode": 14,
+    "name": "k",
+    "unicode": "K",
+    "time": 1781101483.451492
+  },
+  "108": {
+    "pygame_key": 108,
+    "scancode": 15,
+    "name": "l",
+    "unicode": "L",
+    "time": 1781101483.5191104
+  },
+  "231": {
+    "pygame_key": 231,
+    "scancode": 51,
+    "name": "",
+    "unicode": "Ç",
+    "time": 1781101483.5847569
+  },
+  "126": {
+    "pygame_key": 126,
+    "scancode": 52,
+    "name": "",
+    "unicode": "~",
+    "time": 1781101483.6524723
+  },
+  "93": {
+    "pygame_key": 93,
+    "scancode": 49,
+    "name": "]",
+    "unicode": "~",
+    "time": 1781101483.7178326
+  },
+  "1073742049": {
+    "pygame_key": 1073742049,
+    "scancode": 225,
+    "name": "left shift",
+    "unicode": "",
+    "time": 1781101484.5287375
+  },
+  "92": {
+    "pygame_key": 92,
+    "scancode": 100,
+    "name": "\\",
+    "unicode": "\\",
+    "time": 1781101484.6915386
+  },
+  "122": {
+    "pygame_key": 122,
+    "scancode": 29,
+    "name": "z",
+    "unicode": "Z",
+    "time": 1781101484.7732587
+  },
+  "120": {
+    "pygame_key": 120,
+    "scancode": 27,
+    "name": "x",
+    "unicode": "X",
+    "time": 1781101484.8227978
+  },
+  "99": {
+    "pygame_key": 99,
+    "scancode": 6,
+    "name": "c",
+    "unicode": "C",
+    "time": 1781101484.8880723
+  },
+  "118": {
+    "pygame_key": 118,
+    "scancode": 25,
+    "name": "v",
+    "unicode": "V",
+    "time": 1781101484.9533799
+  },
+  "98": {
+    "pygame_key": 98,
+    "scancode": 5,
+    "name": "b",
+    "unicode": "B",
+    "time": 1781101485.0364287
+  },
+  "110": {
+    "pygame_key": 110,
+    "scancode": 17,
+    "name": "n",
+    "unicode": "N",
+    "time": 1781101485.1018548
+  },
+  "109": {
+    "pygame_key": 109,
+    "scancode": 16,
+    "name": "m",
+    "unicode": "M",
+    "time": 1781101485.1696155
+  },
+  "44": {
+    "pygame_key": 44,
+    "scancode": 54,
+    "name": ",",
+    "unicode": ",",
+    "time": 1781101485.2359936
+  },
+  "46": {
+    "pygame_key": 46,
+    "scancode": 55,
+    "name": ".",
+    "unicode": ".",
+    "time": 1781101485.3028908
+  },
+  "59": {
+    "pygame_key": 59,
+    "scancode": 56,
+    "name": ";",
+    "unicode": ";",
+    "time": 1781101485.3684635
+  },
+  "47": {
+    "pygame_key": 47,
+    "scancode": 135,
+    "name": "/",
+    "unicode": "/",
+    "time": 1781101485.435418
+  },
+  "1073742053": {
+    "pygame_key": 1073742053,
+    "scancode": 229,
+    "name": "right shift",
+    "unicode": "",
+    "time": 1781101485.467536
+  },
+  "1073742048": {
+    "pygame_key": 1073742048,
+    "scancode": 224,
+    "name": "left ctrl",
+    "unicode": "",
+    "time": 1781101486.1189437
+  },
+  "1073742051": {
+    "pygame_key": 1073742051,
+    "scancode": 227,
+    "name": "left meta",
+    "unicode": "",
+    "time": 1781101486.2016397
+  },
+  "1073741899": {
+    "pygame_key": 1073741899,
+    "scancode": 75,
+    "name": "page up",
+    "unicode": "",
+    "time": 1781101490.4451256
+  },
+  "1073741898": {
+    "pygame_key": 1073741898,
+    "scancode": 74,
+    "name": "home",
+    "unicode": "",
+    "time": 1781101490.527208
+  },
+  "1073741897": {
+    "pygame_key": 1073741897,
+    "scancode": 73,
+    "name": "insert",
+    "unicode": "",
+    "time": 1781101490.6434588
+  },
+  "1073741902": {
+    "pygame_key": 1073741902,
+    "scancode": 78,
+    "name": "page down",
+    "unicode": "",
+    "time": 1781101490.8242772
+  },
+  "1073741901": {
+    "pygame_key": 1073741901,
+    "scancode": 77,
+    "name": "end",
+    "unicode": "",
+    "time": 1781101490.8721433
+  },
+  "127": {
+    "pygame_key": 127,
+    "scancode": 76,
+    "name": "delete",
+    "unicode": "",
+    "time": 1781101490.9053502
+  },
+  "1073741906": {
+    "pygame_key": 1073741906,
+    "scancode": 82,
+    "name": "up",
+    "unicode": "",
+    "time": 1781101492.1443574
+  },
+  "1073741903": {
+    "pygame_key": 1073741903,
+    "scancode": 79,
+    "name": "right",
+    "unicode": "",
+    "time": 1781101492.1443574
+  },
+  "1073741904": {
+    "pygame_key": 1073741904,
+    "scancode": 80,
+    "name": "left",
+    "unicode": "",
+    "time": 1781101492.277748
+  },
+  "1073741905": {
+    "pygame_key": 1073741905,
+    "scancode": 81,
+    "name": "down",
+    "unicode": "",
+    "time": 1781101492.6387103
+  },
+  "32": {
+    "pygame_key": 32,
+    "scancode": 44,
+    "name": "space",
+    "unicode": " ",
+    "time": 1781101494.0580473
+  },
+  "1073741925": {
+    "pygame_key": 1073741925,
+    "scancode": 101,
+    "name": "",
+    "unicode": "",
+    "time": 1781101494.4245987
+  },
+  "1073742054": {
+    "pygame_key": 1073742054,
+    "scancode": 230,
+    "name": "right alt",
+    "unicode": "",
+    "time": 1781101494.8417208
+  },
+  "1073742050": {
+    "pygame_key": 1073742050,
+    "scancode": 226,
+    "name": "left alt",
+    "unicode": "",
+    "time": 1781101505.1750636
+  },
+  "1073742107": {
+    "pygame_key": 1073742107,
+    "scancode": 283,
+    "name": "",
+    "unicode": "",
+    "time": 1781101508.7293954
+  },
+  "1073742052": {
+    "pygame_key": 1073742052,
+    "scancode": 228,
+    "name": "right ctrl",
+    "unicode": "",
+    "time": 1781101511.1608555
+  },
+  "1073741907": {
+    "pygame_key": 1073741907,
+    "scancode": 83,
+    "name": "numlock",
+    "unicode": "",
+    "time": 1781101513.8093114
+  },
+  "1073741908": {
+    "pygame_key": 1073741908,
+    "scancode": 84,
+    "name": "[/]",
+    "unicode": "/",
+    "time": 1781101514.0260904
+  },
+  "1073741909": {
+    "pygame_key": 1073741909,
+    "scancode": 85,
+    "name": "[*]",
+    "unicode": "*",
+    "time": 1781101514.2430177
+  },
+  "1073741910": {
+    "pygame_key": 1073741910,
+    "scancode": 86,
+    "name": "[-]",
+    "unicode": "-",
+    "time": 1781101514.4413533
+  },
+  "1073741919": {
+    "pygame_key": 1073741919,
+    "scancode": 95,
+    "name": "[7]",
+    "unicode": "",
+    "time": 1781101514.9237802
+  },
+  "1073741920": {
+    "pygame_key": 1073741920,
+    "scancode": 96,
+    "name": "[8]",
+    "unicode": "",
+    "time": 1781101515.1385853
+  },
+  "1073741921": {
+    "pygame_key": 1073741921,
+    "scancode": 97,
+    "name": "[9]",
+    "unicode": "",
+    "time": 1781101515.3746922
+  },
+  "1073741911": {
+    "pygame_key": 1073741911,
+    "scancode": 87,
+    "name": "[+]",
+    "unicode": "+",
+    "time": 1781101515.8100111
+  },
+  "1073741916": {
+    "pygame_key": 1073741916,
+    "scancode": 92,
+    "name": "[4]",
+    "unicode": "",
+    "time": 1781101516.510585
+  },
+  "1073741917": {
+    "pygame_key": 1073741917,
+    "scancode": 93,
+    "name": "[5]",
+    "unicode": "",
+    "time": 1781101516.7277014
+  },
+  "1073741918": {
+    "pygame_key": 1073741918,
+    "scancode": 94,
+    "name": "[6]",
+    "unicode": "",
+    "time": 1781101516.9415386
+  },
+  "1073741913": {
+    "pygame_key": 1073741913,
+    "scancode": 89,
+    "name": "[1]",
+    "unicode": "",
+    "time": 1781101517.6186144
+  },
+  "1073741914": {
+    "pygame_key": 1073741914,
+    "scancode": 90,
+    "name": "[2]",
+    "unicode": "",
+    "time": 1781101517.8527465
+  },
+  "1073741915": {
+    "pygame_key": 1073741915,
+    "scancode": 91,
+    "name": "[3]",
+    "unicode": "",
+    "time": 1781101518.0701787
+  },
+  "1073741912": {
+    "pygame_key": 1073741912,
+    "scancode": 88,
+    "name": "enter",
+    "unicode": "\r",
+    "time": 1781101518.301343
+  },
+  "1073741922": {
+    "pygame_key": 1073741922,
+    "scancode": 98,
+    "name": "[0]",
+    "unicode": "",
+    "time": 1781101519.4749398
+  },
+  "1073741923": {
+    "pygame_key": 1073741923,
+    "scancode": 99,
+    "name": "[.]",
+    "unicode": ".",
+    "time": 1781101519.7408195
+  }
+}

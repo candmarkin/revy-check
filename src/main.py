@@ -13,11 +13,17 @@ if __package__ in (None, ""):
 
 from src import app_state
 from src.functions.app_flow import prompt_password, start_step, wait_for_db_connection
-from src.functions.audio import play_headphone_sequence, play_speaker_sequence, test_microphone_bip, headphone_connected
+from src.functions.audio import (
+    headphone_connected,
+    play_headphone_sequence,
+    play_speaker_sequence,
+    pulse_available,
+    test_microphone_bip,
+)
 from src.functions.camera import camera_test_step
 from src.functions.device_info import fetch_device_info
 from src.functions.ethernet import ethernet_step
-from src.functions.gui import draw_text
+from src.functions.gui import ask_operator, draw_text
 from src.functions.keyboard import keyboard_step
 from src.functions.ntp import consulta_ntp
 from src.functions.save_log import save_log
@@ -59,7 +65,18 @@ def main():
     init_app_state()
     wait_for_db_connection()
 
-    app_state.CONFIG = fetch_device_info()
+    try:
+        app_state.CONFIG = fetch_device_info()
+    except Exception as exc:
+        # Sem isso a falha virava traceback no console e tela preta na bancada.
+        detail = str(exc) if app_state.MODE == "DEV" else "Chame o suporte."
+        ask_operator(
+            ["Não foi possível identificar o equipamento.", detail],
+            {pygame.K_RETURN: ("ENTER = sair", True)},
+            (255, 80, 80),
+        )
+        raise
+
     consulta_ntp()
 
     app_state.SYSTEM_INFO = get_system_info()
@@ -165,35 +182,42 @@ def main():
                 app_state.add_log({"step": "CAMERA_TEST", "time": str(datetime.now()), "result": cam_status})
             state = "USB_STEP"
 
-        elif state == "USB_STEP" and step < len(port_map):
-            bus, port_id, port_name = port_map[step]
-            if not waiting_remove:
-                app_state.add_log({"step": f"USB_CONNECT_TEST_START_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                draw_text([f"Conecte o pendrive na {port_name}..."])
-                if app_state.MODE == "DEV":
-                    lsusb_output = subprocess.check_output(["lsusb", "-t"], text=True)
-                    dev_font = pygame.font.SysFont("Consolas", 12)
-                    y = app_state.HEIGHT // 2 + 50
-                    for line in lsusb_output.splitlines():
-                        text_surf = dev_font.render(line, True, (0, 255, 0))
-                        app_state.SCREEN.blit(text_surf, (50, y))
-                        y += 20
-                    pygame.display.flip()
-
-                if port_has_device(bus, port_id):
-                    waiting_remove = True
-                    app_state.add_log({"step": f"USB_CONNECT_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                    time.sleep(0.5)
-            else:
-                draw_text([f"Remova o pendrive da {port_name}..."])
-                app_state.add_log({"step": f"USB_REMOVE_TEST_START{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                if not port_has_device(bus, port_id):
-                    step += 1
-                    waiting_remove = False
-                    app_state.add_log({"step": f"USB_REMOVE_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
-                    time.sleep(0.5)
+        elif state == "USB_STEP":
             if step >= len(port_map):
+                if not port_map:
+                    app_state.add_log({"step": "USB_TEST_SKIPPED", "time": str(datetime.now()), "result": "APROVADO"})
+                    draw_text(["Nenhuma porta USB cadastrada para este equipamento.", "Pulando teste de USB..."], (255, 200, 0))
+                    time.sleep(2)
                 state = "VIDEO_STEP"
+            else:
+                bus, port_id, port_name = port_map[step]
+                if not waiting_remove:
+                    app_state.add_log({"step": f"USB_CONNECT_TEST_START_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                    draw_text([f"Conecte o pendrive na {port_name}..."])
+                    if app_state.MODE == "DEV":
+                        lsusb_output = subprocess.check_output(["lsusb", "-t"], text=True)
+                        dev_font = pygame.font.SysFont("Consolas", 12)
+                        y = app_state.HEIGHT // 2 + 50
+                        for line in lsusb_output.splitlines():
+                            text_surf = dev_font.render(line, True, (0, 255, 0))
+                            app_state.SCREEN.blit(text_surf, (50, y))
+                            y += 20
+                        pygame.display.flip()
+
+                    if port_has_device(bus, port_id):
+                        waiting_remove = True
+                        app_state.add_log({"step": f"USB_CONNECT_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                        time.sleep(0.5)
+                else:
+                    draw_text([f"Remova o pendrive da {port_name}..."])
+                    app_state.add_log({"step": f"USB_REMOVE_TEST_START{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                    if not port_has_device(bus, port_id):
+                        step += 1
+                        waiting_remove = False
+                        app_state.add_log({"step": f"USB_REMOVE_{port_name}", "time": str(datetime.now()), "result": "APROVADO"})
+                        time.sleep(0.5)
+                if step >= len(port_map):
+                    state = "VIDEO_STEP"
 
         elif state == "VIDEO_STEP":
             app_state.add_log({"step": "VIDEO_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
@@ -209,11 +233,30 @@ def main():
 
         elif state == "HEADPHONE_STEP":
             app_state.add_log({"step": "HEADPHONE_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
-            draw_text(["Conecte o headphone..."])
-            if headphone_connected():
+            if pulse_available():
+                draw_text(["Conecte o headphone..."])
+                connected = headphone_connected()
+            else:
+                # Sem pulsectl nao existe deteccao de jack, e o polling ficaria
+                # esperando para sempre um evento que nunca chega.
+                connected = ask_operator(
+                    [
+                        "Detecção automática de headphone indisponível.",
+                        "Conecte o headphone e confirme.",
+                    ],
+                    {
+                        pygame.K_y: ("Y = conectei", True),
+                        pygame.K_n: ("N = reprovar", False),
+                    },
+                )
+
+            if connected:
                 app_state.add_log({"step": "HEADPHONE_CONNECT", "time": str(datetime.now()), "result": "APROVADO"})
                 state = "HEADPHONE_TESTING"
                 time.sleep(0.5)
+            elif not pulse_available():
+                app_state.add_log({"step": "HEADPHONE_CONNECT", "time": str(datetime.now()), "result": "REPROVADO"})
+                state = "SPEAKER_STEP"
 
         elif state == "HEADPHONE_TESTING":
             app_state.add_log({"step": "HEADPHONE_TESTING", "time": str(datetime.now()), "result": "APROVADO"})
@@ -221,8 +264,16 @@ def main():
             state = "HEADPHONE_REMOVE"
 
         elif state == "HEADPHONE_REMOVE":
-            draw_text(["Remova o headphone..."])
-            if not headphone_connected():
+            if pulse_available():
+                draw_text(["Remova o headphone..."])
+                removed = not headphone_connected()
+            else:
+                removed = ask_operator(
+                    ["Remova o headphone."],
+                    {pygame.K_RETURN: ("ENTER = removido", True)},
+                )
+
+            if removed:
                 app_state.add_log({"step": "HEADPHONE_REMOVE", "time": str(datetime.now()), "result": "APROVADO"})
                 state = "SPEAKER_STEP"
                 time.sleep(0.5)
@@ -255,6 +306,10 @@ def main():
             time.sleep(5)
             running = False
 
+        # Apresenta o frame do loop principal. Sem isso, os estados que nao
+        # desenham nada (equipamento sem tela/teclado/touchpad/wifi/camera)
+        # deixam a tela congelada no ultimo frame de outra etapa.
+        pygame.display.flip()
         app_state.CLOCK.tick(10)
 
 
