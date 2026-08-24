@@ -276,9 +276,10 @@ def cadastro_portas():
         "Dê um nome para a porta de vídeo que deseja cadastrar (Ex.: HDMI Esquerdo)\n\n** Deixe vazio para finalizar **"
     )
     while new_video_port:
-        # Fotografa as portas ja conectadas ANTES de pedir o novo cabo: assim a
-        # porta cadastrada e sempre a que acabou de ser conectada, e cabos que ja
-        # estavam plugados (inclusive de portas ja cadastradas) sao ignorados.
+        # Fotografa as portas ja conectadas ANTES de pedir o novo cabo. Se uma
+        # porta nova aparecer depois do OK, ela e' a certa mesmo com outros
+        # cabos plugados. Cabo que ja estava conectado antes de comecar (a
+        # maquina foi ligada com ele) nao gera delta -- ver fallback abaixo.
         baseline = list_connected_video_ports()
         wait_for_ok(f"Conecte o cabo de vídeo na porta {new_video_port} e clique em OK...")
 
@@ -293,16 +294,9 @@ def cadastro_portas():
 
         while True:
             time.sleep(1)  # tempo para o kernel atualizar o status em /sys/class/drm
-            novas = list_connected_video_ports() - baseline
-
-            if not novas:
-                if not messagebox.askretrycancel(
-                    "Nenhuma porta nova",
-                    f"Nenhuma porta de vídeo nova foi detectada para '{new_video_port}'.\n\n"
-                    "Verifique se o cabo está conectado e tente novamente.",
-                ):
-                    break
-                continue
+            registradas = {drm_connector_name(v.get("entry")) for v in video_ports}
+            conectadas = list_connected_video_ports()
+            novas = (conectadas - baseline) - registradas
 
             if len(novas) > 1:
                 if not messagebox.askretrycancel(
@@ -315,19 +309,51 @@ def cadastro_portas():
                 baseline = list_connected_video_ports()
                 continue
 
-            connector = novas.pop()
-            ja_cadastrada = next(
-                (v for v in video_ports if drm_connector_name(v.get("entry")) == connector), None
-            )
-            if ja_cadastrada:
-                if not messagebox.askretrycancel(
-                    "Porta já cadastrada",
-                    f"A porta {connector} já está cadastrada como '{ja_cadastrada['label']}'.\n\n"
-                    "Conecte o cabo em outra porta e tente novamente.",
-                ):
-                    break
-                baseline = list_connected_video_ports()
-                continue
+            if novas:
+                connector = novas.pop()
+            else:
+                # Nenhum delta: ou o cabo ja estava conectado desde o boot, ou
+                # nao foi conectado nada.
+                candidatas = conectadas - registradas
+                if len(candidatas) == 1:
+                    connector = next(iter(candidatas))
+                elif candidatas:
+                    # Varios cabos ja plugados e nenhum delta: identifica pela
+                    # remocao, que e' a unica pista possivel nesse estado.
+                    wait_for_ok(
+                        f"Não foi possível identificar a porta '{new_video_port}' automaticamente "
+                        "(o cabo já estava conectado).\n\n"
+                        f"DESCONECTE o cabo da porta {new_video_port} e clique em OK..."
+                    )
+                    time.sleep(1)
+                    removidas = candidatas - list_connected_video_ports()
+                    if len(removidas) != 1:
+                        if not messagebox.askretrycancel(
+                            "Porta não identificada",
+                            "Não foi possível identificar a porta pela remoção do cabo.\n\n"
+                            f"Reconecte o cabo apenas na porta {new_video_port} e tente novamente.",
+                        ):
+                            break
+                        baseline = list_connected_video_ports()
+                        continue
+                    connector = removidas.pop()
+                else:
+                    todas_cadastradas = bool(conectadas) and not (conectadas - registradas)
+                    detalhe = (
+                        "Todas as portas conectadas já estão cadastradas: "
+                        + ", ".join(sorted(conectadas))
+                        + "."
+                        if todas_cadastradas
+                        else "Verifique se o cabo está conectado."
+                    )
+                    if not messagebox.askretrycancel(
+                        "Nenhuma porta nova",
+                        f"Nenhuma porta de vídeo nova foi detectada para '{new_video_port}'.\n\n"
+                        + detalhe
+                        + "\n\nTente novamente.",
+                    ):
+                        break
+                    continue
 
             confirm = messagebox.askyesno(
                 "Confirmação",
