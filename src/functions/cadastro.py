@@ -152,6 +152,28 @@ def send_to_db(
         cursor.close()
 
 
+def list_connected_video_ports():
+    """Retorna o conjunto de portas de video externas conectadas no momento."""
+    connected = set()
+    try:
+        entries = subprocess.check_output("ls /sys/class/drm/", shell=True).decode("utf-8").split()
+    except Exception:
+        return connected
+
+    for port in entries:
+        if "-" not in port or "eDP" in port:
+            continue
+        try:
+            status = subprocess.check_output(
+                f"cat /sys/class/drm/{port}/status", shell=True
+            ).decode("utf-8").strip()
+        except Exception:
+            continue
+        if status == "connected":
+            connected.add(port)
+    return connected
+
+
 def cadastro_portas():
     root = tk.Tk()
     root.withdraw()
@@ -248,49 +270,67 @@ def cadastro_portas():
         "Dê um nome para a porta de vídeo que deseja cadastrar (Ex.: HDMI Esquerdo)\n\n** Deixe vazio para finalizar **"
     )
     while new_video_port:
+        # Fotografa as portas ja conectadas ANTES de pedir o novo cabo: assim a
+        # porta cadastrada e sempre a que acabou de ser conectada, e cabos que ja
+        # estavam plugados (inclusive de portas ja cadastradas) sao ignorados.
+        baseline = list_connected_video_ports()
         wait_for_ok(f"Conecte o cabo de vídeo na porta {new_video_port} e clique em OK...")
 
         while True:
-            try:
-                videoports = subprocess.check_output("ls /sys/class/drm/", shell=True).decode("utf-8").split()
-                videoports = [port for port in videoports if "-" in port]
-                for port in videoports:
-                    try:
-                        isconnected = subprocess.check_output(
-                            f"cat /sys/class/drm/{port}/status", shell=True
-                        ).decode("utf-8").strip()
-                    except Exception:
-                        isconnected = ""
-                    if (
-                        isconnected == "connected"
-                        and port not in [v.get("entry") for v in video_ports]
-                        and port != "card0-eDP-1"
-                    ):
-                        confirm = messagebox.askyesno(
-                            "Confirmação",
-                            f"Porta detectada: {port}\nLabel: {new_video_port}\n\nConfirmar cadastro?",
-                        )
-                        if confirm:
-                            video_ports.append({"label": new_video_port, "entry": port})
-                            wait_for_ok(
-                                "Porta de vídeo cadastrada com sucesso!\n\nRemova todos os cabos de vídeo conectados..."
-                            )
-                            while True:
-                                try:
-                                    if port == "card1-eDP-1":
-                                        break
-                                    still_connected = subprocess.check_output(
-                                        f"cat /sys/class/drm/{port}/status", shell=True
-                                    ).decode("utf-8").strip()
-                                except Exception:
-                                    still_connected = ""
-                                if still_connected == "connected":
-                                    time.sleep(1)
-                                else:
-                                    break
-            except Exception:
-                pass
-            break
+            time.sleep(1)  # tempo para o kernel atualizar o status em /sys/class/drm
+            novas = list_connected_video_ports() - baseline
+
+            if not novas:
+                if not messagebox.askretrycancel(
+                    "Nenhuma porta nova",
+                    f"Nenhuma porta de vídeo nova foi detectada para '{new_video_port}'.\n\n"
+                    "Verifique se o cabo está conectado e tente novamente.",
+                ):
+                    break
+                continue
+
+            if len(novas) > 1:
+                if not messagebox.askretrycancel(
+                    "Mais de uma porta detectada",
+                    "Foram detectadas várias portas novas:\n\n"
+                    + ", ".join(sorted(novas))
+                    + "\n\nConecte apenas um cabo por vez e tente novamente.",
+                ):
+                    break
+                baseline = list_connected_video_ports()
+                continue
+
+            port = novas.pop()
+            ja_cadastrada = next((v for v in video_ports if v.get("entry") == port), None)
+            if ja_cadastrada:
+                if not messagebox.askretrycancel(
+                    "Porta já cadastrada",
+                    f"A porta {port} já está cadastrada como '{ja_cadastrada['label']}'.\n\n"
+                    "Conecte o cabo em outra porta e tente novamente.",
+                ):
+                    break
+                baseline = list_connected_video_ports()
+                continue
+
+            confirm = messagebox.askyesno(
+                "Confirmação",
+                f"Porta detectada: {port}\nLabel: {new_video_port}\n\nConfirmar cadastro?",
+            )
+            if confirm:
+                video_ports.append({"label": new_video_port, "entry": port})
+                messagebox.showinfo(
+                    "Cadastro",
+                    "Porta de vídeo cadastrada com sucesso!\n\n"
+                    "Você pode manter o cabo conectado para cadastrar as próximas portas.",
+                )
+                break
+
+            if not messagebox.askretrycancel(
+                "Cadastro cancelado",
+                f"A porta {port} não foi cadastrada.\n\nDeseja tentar novamente?",
+            ):
+                break
+            baseline = list_connected_video_ports()
         new_video_port = ask_text("Dê um nome para a próxima porta de vídeo (ou vazio para finalizar)")
 
     messagebox.showinfo(
