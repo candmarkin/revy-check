@@ -22,18 +22,61 @@ Este projeto implementa uma aplicação em Pygame que guia um operador por uma s
 
 É recomendado criar um ambiente virtual antes de instalar dependências.
 
-## Instalação (PowerShell)
+## Instalação (Windows 10/11)
 
 Abra o PowerShell na pasta raiz do repositório e execute:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install --upgrade pip
-pip install pygame
+py -3.10 -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Observação: o repositório atualmente não inclui um `requirements.txt`. Se você adicionar dependências extras, atualize este README.
+**Fixe a versão do Python com `py -3.10`.** O `pygame` 2.6.1 não publica wheel
+para Python 3.14, e num venv 3.14 o app morre com
+`ModuleNotFoundError: No module named 'pygame.base'`. Se o `py -0p` mostrar o
+3.14 como padrão (`*`), um `py -m venv` sem versão cai nessa armadilha.
+Validado em 3.10.11; 3.11/3.12/3.13 também têm wheel.
+
+Toda a detecção de hardware no Windows (USB, vídeo, áudio, rede, WiFi) usa
+`ctypes`/`winreg` da biblioteca padrão — não há dependência específica de
+plataforma além do que já está no `requirements.txt`.
+
+Antes de rodar o app, confira o ambiente:
+
+```powershell
+python scripts\smoke_test.py
+```
+
+Duas coisas exigem privilégio de administrador e degradam sozinhas sem ele:
+ajustar o relógio pelo NTP e alguns caminhos de rede. O resto funciona como
+usuário normal.
+
+### Cadastro de portas por sistema operacional
+
+A mesma porta física tem nomes diferentes em cada SO (`0000:00:14.0/3.2` no
+Linux, `PCIROOT(0)#PCI(1400)/3.2` no Windows), e as saídas de vídeo idem. Um
+equipamento cadastrado na linha Debian **não** casa na linha Windows: cada
+modelo precisa de um cadastro por SO.
+
+Rode a migração uma vez no banco antes de cadastrar modelos no Windows:
+
+```bash
+mysql -h 10.3.0.12 -u drack -p revycheck < scripts/add_platform_column.sql
+```
+
+Sem ela o app ainda roda, mas avisa no console e pode escolher o cadastro do
+outro SO por engano.
+
+### Gerar o executável
+
+```powershell
+pyinstaller main.spec
+```
+
+O binário sai em `dist\RevyCheck.exe`. Leia a nota de segurança no topo do
+`main.spec` antes de distribuir.
 
 ## Instalação (Debian minimal)
 
@@ -108,17 +151,45 @@ Por padrão o aplicativo inicia com `MODE = "PROD"` em `src/main.py`.
 
 No modo DEV, o app permite fechar com ESC e salva o log antes de sair.
 
+### Atalhos do modo DEV
+
+| Atalho | O que faz |
+|---|---|
+| `Ctrl+Shift+A` | Aprova o passo atual e vai para o próximo |
+| `Ctrl+Shift+J` | Abre o menu de passos e salta para o escolhido |
+| `ESC` | Sai do app salvando o log |
+
+Se o DEV já estiver ativo quando o fluxo começa, o menu de passos aparece logo
+após a seleção do tipo de teste — dá para entrar direto no passo que interessa,
+sem passar por tela, teclado, touchpad, wifi, câmera, USB, vídeo e áudio antes.
+`ESC` no menu segue o fluxo normal, do começo.
+
+Aprovação manual vai para o log como `DEV_APROVADO_<PASSO>`, e não com o nome
+do passo real: uma execução aprovada na mão **não** pode ficar indistinguível
+de uma que passou de verdade.
+
+Os atalhos são inertes em PROD — as funções checam `app_state.MODE` e saem sem
+fazer nada, então não há como um operador dispará-los na linha.
+
 ## Estrutura importante
 
 - `src/main.py` — loop principal e orquestração dos estados de teste
-- `src/functions/` — módulos auxiliares (detecção de hardware, áudio, vídeo, ethernet e utilitários)
-  - `fetch_device_info.py` — devolve configuração da plataforma (mapa de portas, flags)
+- `src/hal/` — camada de hardware: a mesma API sobre Linux e Windows
+  - `linux.py` — sysfs, procfs, `iw`/`nmcli`, PulseAudio
+  - `windows.py` — cfgmgr32 (USB), CCD API (vídeo), registro (áudio/rede/DMI),
+    wlanapi (WiFi), tudo por `ctypes`/`winreg`
+  - o backend é escolhido por `sys.platform` no import; os steps de teste não
+    sabem em qual SO estão rodando
+- `src/functions/` — os passos do checklist e a interface
+  - `device_info.py` — devolve configuração do equipamento (mapa de portas, flags)
   - `usb.py` — detecção de presença em portas USB
   - `video_ports.py` — checagem e desenho das saídas de vídeo
   - `audio.py` — reprodução de tons e detecção de headphone/microfone
   - `ethernet.py` — checagem de rede
   - `screen.py`, `keyboard.py`, `save_log.py`, `tab_lock.py` — utilitários
-- `scripts/` — scripts auxiliares para testes e manutenção
+- `scripts/` — scripts auxiliares, migrações SQL e o smoke test
+- `WINDOWS.md` — como o porte para Windows funciona, com o mapeamento de cada
+  API e os pontos ainda em aberto
 
 ## Logs
 

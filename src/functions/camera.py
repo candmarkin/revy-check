@@ -3,8 +3,10 @@ import cv2
 import numpy as np
 from datetime import datetime
 import os
-import subprocess
 from pathlib import Path
+
+from src import hal
+from src.functions import dev_mode
 
 class CameraTest:
     def __init__(self, screen, font, smb_config=None):
@@ -31,7 +33,7 @@ class CameraTest:
     def init_camera(self, camera_index=0):
         """Inicializa a câmera"""
         try:
-            self.camera = cv2.VideoCapture(camera_index)
+            self.camera = cv2.VideoCapture(camera_index, hal.camera_backend())
             if not self.camera.isOpened():
                 return False, "Não foi possível abrir a câmera"
             
@@ -87,9 +89,7 @@ class CameraTest:
             return False, "Nenhum frame para salvar"
         
         try:
-            # Criar diretório se não existir
-            photos_dir = Path("/tmp/revy_photos")
-            photos_dir.mkdir(exist_ok=True)
+            photos_dir = hal.photos_dir()
             
             # Gerar nome do arquivo
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -109,10 +109,14 @@ class CameraTest:
             return False, f"Erro ao salvar foto: {str(e)}"
     
     def upload_to_smb(self):
-        """Envia a foto para o compartilhamento SMB"""
+        """Envia a foto para o compartilhamento SMB.
+
+        O transporte fica no backend: `mount -t cifs` no Linux (com sudo),
+        sessao autenticada + copia para caminho UNC no Windows.
+        """
         if not self.photo_path or not os.path.exists(self.photo_path):
             return False, "Nenhuma foto para enviar"
-        
+
         if not self.smb_config:
             server = "172.16.48.33"
             share = "publico/Relatorios/RevyCheck/Camera"
@@ -125,54 +129,11 @@ class CameraTest:
             username = self.smb_config.get("username", "")
             password = self.smb_config.get("password", "")
             remote_path = self.smb_config.get("remote_path", "")
-        
-        try:
-            
-            if not all([server, share, username, password]):
-                return False, "Configuração SMB incompleta"
-            
-            # Montar o compartilhamento SMB
-            mount_point = Path("/tmp/smb_mount")
-            mount_point.mkdir(exist_ok=True)
-            
-            # Desmontar se já estiver montado
-            subprocess.run(["sudo", "umount", str(mount_point)], 
-                          stderr=subprocess.DEVNULL)
-            
-            # Montar
-            mount_cmd = [
-                "sudo", "mount", "-t", "cifs",
-                "-o", f"username={username},password={password},vers=3.0,uid={os.getuid()},gid={os.getgid()}",
-                f"//{server}/{share}",
-                str(mount_point)
-            ]
-            
-            result = subprocess.run(mount_cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                return False, f"Erro ao montar SMB: {result.stderr}"
-            
-            # Criar diretório remoto se necessário
-            remote_dir = mount_point / remote_path
-            remote_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Copiar arquivo
-            remote_file = remote_dir / self.photo_path.name
-            subprocess.run(["cp", str(self.photo_path), str(remote_file)], check=True)
-            
-            # Desmontar
-            subprocess.run(["sudo", "umount", str(mount_point)], check=True)
-            
-            return True, f"Foto enviada para //{server}/{share}/{remote_path}/{self.photo_path.name}"
-            
-        except Exception as e:
-            # Tentar desmontar em caso de erro
-            try:
-                subprocess.run(["sudo", "umount", str(mount_point)], 
-                              stderr=subprocess.DEVNULL)
-            except:
-                pass
-            return False, f"Erro ao enviar para SMB: {str(e)}"
-    
+
+        return hal.smb_upload(
+            self.photo_path, server, share, username, password, remote_path
+        )
+
     def draw_ui(self, surface, message="", color=(255, 255, 255)):
         """Desenha a interface com preview da câmera"""
         self.screen.fill((0, 0, 0))
@@ -240,6 +201,7 @@ class CameraTest:
             while self.running:
                 # Eventos
                 for event in pygame.event.get():
+                    dev_mode.handle(event)
                     if event.type == pygame.QUIT:
                         self.running = False
                         return False, "Cancelado pelo usuário", None

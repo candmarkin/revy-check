@@ -1,58 +1,11 @@
-import subprocess
-
 import pygame
 
-from src import app_state
+from src import app_state, hal
 
 
 def get_system_info():
-    """Obtém informações do sistema: serial, CPU, RAM, disco."""
-    info = {}
-
-    try:
-        info["serial"] = subprocess.check_output(
-            "cat /sys/class/dmi/id/product_serial", shell=True
-        ).strip().decode("utf-8")
-    except Exception:
-        info["serial"] = "N/A"
-
-    try:
-        cpu_info = subprocess.check_output(
-            "cat /proc/cpuinfo | grep 'model name' | head -1", shell=True
-        ).decode("utf-8")
-        info["cpu"] = cpu_info.split(":")[1].strip() if ":" in cpu_info else "N/A"
-    except Exception:
-        info["cpu"] = "N/A"
-
-    try:
-        mem_info = subprocess.check_output(
-            "cat /proc/meminfo | grep MemTotal", shell=True
-        ).decode("utf-8")
-        mem_kb = int(mem_info.split()[1])
-        mem_gb = round(mem_kb / (1024 ** 2), 1)
-        info["ram"] = f"{mem_gb} GB"
-    except Exception:
-        info["ram"] = "N/A"
-
-    try:
-        disk_info = subprocess.check_output(
-            "lsblk -o NAME,SIZE -dn", shell=True
-        ).decode("utf-8").strip().splitlines()
-        if len(disk_info) >= 1:
-            info["disk"] = " / ".join(disk_info)
-        else:
-            info["disk"] = "N/A"
-    except Exception:
-        info["disk"] = "N/A"
-
-    try:
-        info["ip"] = subprocess.check_output(
-            "hostname -I | awk '{print $1}'", shell=True
-        ).decode("utf-8").strip()
-    except Exception:
-        info["ip"] = "N/A"
-
-    return info
+    """Informações do sistema: serial, CPU, RAM, disco, IP."""
+    return hal.system_info()
 
 
 def draw_system_info(system_info):

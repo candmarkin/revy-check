@@ -1,1 +1,47 @@
-[]
+[
+  {
+    "step": "TEST_START_QUALIDADE1",
+    "time": "2026-08-25 16:13:09.188777",
+    "result": "APROVADO"
+  },
+  {
+    "step": "SCREEN_TEST_START",
+    "time": "2026-08-25 16:13:18.741473",
+    "result": "APROVADO"
+  },
+  {
+    "step": "SCREEN_TEST",
+    "time": "2026-08-25 16:13:24.901117",
+    "result": "APROVADO"
+  },
+  {
+    "step": "KEYBOARD_TEST_START",
+    "time": "2026-08-25 16:13:24.901117",
+    "result": "APROVADO"
+  },
+  {
+    "step": "SPEAKER_TEST_START",
+    "time": "2026-08-25 16:13:30.890882",
+    "result": "APROVADO"
+  },
+  {
+    "step": "SPEAKER_TEST",
+    "time": "2026-08-25 16:13:40.377337",
+    "result": "APROVADO"
+  },
+  {
+    "step": "MICROPHONE_TEST_START",
+    "time": "2026-08-25 16:13:41.379538",
+    "result": "APROVADO"
+  },
+  {
+    "step": "MICROPHONE_TEST",
+    "time": "2026-08-25 16:13:45.945381",
+    "result": "APROVADO"
+  },
+  {
+    "step": "TEST_STOP",
+    "time": "2026-08-25 16:13:47.054949",
+    "result": "APROVADO"
+  }
+]

@@ -1,5 +1,4 @@
 import json
-import subprocess
 import sys
 import time
 from datetime import datetime
@@ -7,7 +6,7 @@ from datetime import datetime
 import mysql.connector
 import pygame
 
-from src import app_state
+from src import app_state, hal
 from src.functions.gui import draw_text
 
 
@@ -73,12 +72,7 @@ def save_log():
             )
             cursor = conn2.cursor()
 
-            try:
-                device_serial = subprocess.check_output(
-                    "cat /sys/class/dmi/id/product_serial", shell=True
-                ).strip().decode("utf-8")
-            except Exception:
-                device_serial = "unknown"
+            device_serial = hal.serial_number()
 
             for entry in app_state.LOG_DATA:
                 step = entry.get("step", "")

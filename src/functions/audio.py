@@ -5,7 +5,7 @@ import numpy as np
 import pygame
 import sounddevice as sd
 
-from src import app_state
+from src import app_state, hal
 from src.functions.gui import ask_operator, draw_text
 
 # Y aprova, N reprova, R repete - mesmo contrato do screen_step.
@@ -134,38 +134,19 @@ def test_microphone_bip():
         return result
 
 
-try:
-    import pulsectl
-
-    _pulse = pulsectl.Pulse("headphone-monitor")
-    _pulse_error = None
-except Exception as exc:
-    _pulse = None
-    _pulse_error = f"{type(exc).__name__}: {exc}"
-
-
-def pulse_available():
-    """False quando o pulsectl nao carregou.
+def jack_detection_available():
+    """False quando o SO nao sabe dizer se ha' algo no jack.
 
     Sem isso quem chama nao distingue "nenhum headphone plugado" de "nao da'
     para detectar headphone nenhum", e o passo espera para sempre um evento
     que nunca vai chegar.
     """
-    return _pulse is not None
+    return hal.jack_detection_available()
 
 
-def pulse_error():
-    return _pulse_error
+def jack_detection_error():
+    return hal.jack_detection_error()
 
 
 def headphone_connected():
-    if not _pulse:
-        return False
-    for sink in _pulse.sink_list():
-        try:
-            port_name = sink.port_active.name.lower()
-            if "headphone" in port_name or "analog-output-headphones" in port_name:
-                return True
-        except Exception:
-            continue
-    return False
+    return hal.headphone_connected()

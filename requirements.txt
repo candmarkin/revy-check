@@ -1,10 +1,23 @@
 # Dependencies for revy-check
-# Tested with Python 3.10+ and pygame 2.x
+#
+# Python 3.10 a 3.13. NAO use 3.14: o pygame 2.6.1 nao publica wheel para essa
+# versao, e o venv sobe sem pygame utilizavel ("No module named pygame.base").
+# Crie o ambiente fixando a versao:  py -3.10 -m venv venv
+
+# --- comuns aos dois sistemas ---
 pygame>=2.1.4,<3.0.0
-numpy>=1.21.0,<2.0.0
-pulsectl>=21.8.0,<22.0.0
+numpy>=1.21.0
 sounddevice>=0.4.6,<1.0.0
-numpy>=1.21.0,<2.0.0
+opencv-python>=4.6
 mysql-connector-python>=8.0.0,<9.0.0
-opencv-python
 ntplib
+psutil>=5.9
+
+# --- Linux ---
+# Deteccao de jack via PulseAudio. No Windows o equivalente sai do registro
+# (MMDevices), sem dependencia -- e o pulsectl nem instala fora do Linux.
+pulsectl>=21.8.0,<22.0.0 ; sys_platform == "linux"
+
+# No Windows, USB (cfgmgr32), video (CCD API), audio (registro), rede
+# (registro) e WiFi (wlanapi) usam so' ctypes/winreg da biblioteca padrao.
+# Nao ha' dependencia especifica de plataforma.

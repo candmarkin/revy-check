@@ -1,13 +1,12 @@
 import pygame
 
-from src import app_state
-from src.functions.hw_paths import drm_available, drm_connector_status
+from src import app_state, hal
 from src.functions.system_info import draw_system_info
 
-# Status sintetico usado quando nao existe nenhum connector em /sys/class/drm:
-# sem isso o teste reprovava as portas em silencio, escondendo que o problema
-# e' o driver de video e nao o cabo.
-NO_DRM = "driver de video ausente"
+# Status sintetico usado quando o SO nao enumera nenhuma saida de video: sem
+# isso o teste reprovava as portas em silencio, escondendo que o problema e' o
+# driver de video e nao o cabo.
+NO_DRIVER = "driver de video ausente"
 
 video_aprovado = {}
 
@@ -18,15 +17,12 @@ def init_video_state(video_ports):
 
 
 def get_video_status(video_ports):
-    driver_ok = drm_available()
+    driver_ok = hal.video_available()
     status_list = []
     all_approved = True
     for porta in video_ports:
         entry = porta["entry"]
-        # O connector e' procurado pelo nome ('HDMI-A-1'), nao pela entrada
-        # completa ('card0-HDMI-A-1'): o indice do card muda conforme o driver
-        # que carregou.
-        status = drm_connector_status(entry) if driver_ok else NO_DRM
+        status = hal.video_connector_status(entry) if driver_ok else NO_DRIVER
         if status == "connected":
             video_aprovado[entry] = True
         status_list.append({"name": porta["label"], "status": status, "aprovado": video_aprovado[entry]})
@@ -50,7 +46,7 @@ def draw_video(outputs):
         else:
             color = (200, 0, 0)
             all_approved = False
-            if o["status"] == NO_DRM:
+            if o["status"] == NO_DRIVER:
                 sem_driver = True
         text = app_state.FONT.render(
             f"{o['name']}: {o['status']} {'(aprovado)' if o['aprovado'] else ''}",
@@ -60,11 +56,7 @@ def draw_video(outputs):
         app_state.SCREEN.blit(text, (50, y))
         y += 50
     if sem_driver:
-        msg = app_state.FONT.render(
-            "Nenhum connector em /sys/class/drm. Verifique: dmesg | grep -i 'firmware load'",
-            True,
-            (255, 80, 80),
-        )
+        msg = app_state.FONT.render(hal.NO_VIDEO_DRIVER_HINT, True, (255, 80, 80))
     elif all_approved:
         msg = app_state.FONT.render(
             "Todas as portas conectadas! Pressione ESC para continuar.",

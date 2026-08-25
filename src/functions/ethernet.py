@@ -1,26 +1,22 @@
-import os
 import time
 from datetime import datetime
 
 import pygame
 
-from src import app_state
+from src import app_state, hal
 from src.functions.gui import draw_text
+from src.functions import dev_mode
 
 
 def ethernet_connected(eth_interface):
-    carrier_file = f"/sys/class/net/{eth_interface}/carrier"
-    if os.path.isfile(carrier_file):
-        with open(carrier_file, "r") as f:
-            status = f.read().strip()
-        return status == "1"
-    return False
+    return hal.ethernet_connected(eth_interface)
 
 
 def ethernet_step(eth_interface):
     waiting_remove = False
     while True:
         for event in pygame.event.get():
+            dev_mode.handle(event)
             if event.type == pygame.QUIT and app_state.MODE == "DEV":
                 return
         if not waiting_remove:

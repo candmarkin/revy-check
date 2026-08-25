@@ -4,6 +4,7 @@ import pygame
 
 from src import app_state
 from src.functions.system_info import draw_system_info
+from src.functions import dev_mode
 
 
 def ask_operator(lines, options, color=(255, 255, 255)):
@@ -19,6 +20,7 @@ def ask_operator(lines, options, color=(255, 255, 255)):
         draw_text(list(lines) + ["", legend], color)
 
         for event in pygame.event.get():
+            dev_mode.handle(event)
             if event.type == pygame.QUIT and app_state.MODE == "DEV":
                 # Importado aqui porque save_log importa este modulo.
                 from src.functions.save_log import save_log
@@ -47,4 +49,11 @@ def draw_text(lines, color=(255, 255, 255)):
         rect = rendered.get_rect(center=(app_state.WIDTH // 2, y))
         app_state.SCREEN.blit(rendered, rect)
         y += 50
+
+    # Os passos que desenham a propria tela (USB, video, ethernet, audio)
+    # passam por aqui; sem isto a legenda dos atalhos de DEV so' apareceria
+    # entre um passo e outro. As telas que pintam a tela inteira de proposito
+    # (teste de cor, teclado, touchpad, camera) ficam de fora justamente para
+    # nao sujarem o que esta' sendo avaliado.
+    dev_mode.draw_legend()
     pygame.display.flip()

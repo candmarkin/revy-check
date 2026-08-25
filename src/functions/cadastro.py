@@ -1,27 +1,14 @@
-import subprocess
 import time
 
 import mysql.connector
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 
-from src.functions.hw_paths import (
-    cpu_vendor,
-    drm_connector_name,
-    drm_connector_status,
-    drm_connectors,
-    is_internal_panel,
-    mass_storage_port_ids,
-    mass_storage_ports,
-)
+from src import hal
 
 
 def has_pendrive_connected_cd():
-    try:
-        outputA = subprocess.check_output(["lsusb", "-t"], text=True)
-        return "Class=Mass Storage" in str(outputA)
-    except Exception:
-        return False
+    return bool(hal.mass_storage_port_ids())
 
 
 def ask_yes_no(question):
@@ -120,12 +107,14 @@ def send_to_db(
 ):
     cursor = conn.cursor()
     try:
-        insert_device = (
-            "INSERT INTO devices "
-            "(name, cpu_vendor, type, has_embedded_screen, has_embedded_keyboard, has_ethernet, "
-            "eth_interface, has_speaker, has_headphone_jack, has_microphone, "
-            "has_wifi, has_touchpad, has_camera) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        # As portas sao gravadas no formato do SO onde o cadastro foi feito, e
+        # os formatos nao se traduzem entre Linux e Windows -- por isso a
+        # coluna `platform` entra junto. Bancos anteriores a
+        # scripts/add_platform_column.sql caem no INSERT sem ela.
+        columns = (
+            "name, cpu_vendor, type, has_embedded_screen, has_embedded_keyboard, "
+            "has_ethernet, eth_interface, has_speaker, has_headphone_jack, "
+            "has_microphone, has_wifi, has_touchpad, has_camera"
         )
         device_vals = (
             productname,
@@ -142,7 +131,24 @@ def send_to_db(
             1 if has_touchpad else 0,
             1 if has_camera else 0,
         )
-        cursor.execute(insert_device, device_vals)
+        try:
+            cursor.execute(
+                f"INSERT INTO devices ({columns}, platform) "
+                f"VALUES ({', '.join(['%s'] * (len(device_vals) + 1))})",
+                device_vals + (hal.PLATFORM,),
+            )
+        except mysql.connector.Error as exc:
+            if exc.errno != 1054:  # ER_BAD_FIELD_ERROR
+                raise
+            print(
+                "AVISO: tabela devices sem a coluna 'platform'. "
+                "Rode scripts/add_platform_column.sql."
+            )
+            cursor.execute(
+                f"INSERT INTO devices ({columns}) "
+                f"VALUES ({', '.join(['%s'] * len(device_vals))})",
+                device_vals,
+            )
         dev_id = cursor.lastrowid
 
         if port_map:
@@ -165,15 +171,8 @@ def send_to_db(
 
 
 def list_connected_video_ports():
-    """Connectors de video externos conectados agora, sem o prefixo 'cardN-'."""
-    connected = set()
-    for path in drm_connectors():
-        connector = drm_connector_name(path)
-        if is_internal_panel(connector):
-            continue
-        if drm_connector_status(connector) == "connected":
-            connected.add(connector)
-    return connected
+    """Saidas de video externas conectadas agora, no formato do backend."""
+    return hal.connected_video_ports()
 
 
 def cadastro_portas():
@@ -217,27 +216,11 @@ def cadastro_portas():
             root.destroy()
             raise SystemExit(0)
 
-    try:
-        manufacturer = subprocess.check_output(
-            "cat /sys/class/dmi/id/sys_vendor", shell=True
-        ).strip().decode("utf-8")
-    except Exception:
-        manufacturer = ""
-    try:
-        if "LENOVO" in str(manufacturer).upper():
-            productname = subprocess.check_output(
-                "cat /sys/class/dmi/id/product_version", shell=True
-            ).strip().decode("utf-8")
-        else:
-            productname = subprocess.check_output(
-                "cat /sys/class/dmi/id/product_name", shell=True
-            ).strip().decode("utf-8")
-    except Exception:
-        productname = "UnknownDevice"
+    manufacturer, productname = hal.dmi()
 
     # Distingue as variantes Intel e AMD do mesmo modelo comercial: o DMI e'
     # identico nas duas, mas a topologia USB e os connectors DRM nao sao.
-    vendor = cpu_vendor()
+    vendor = hal.cpu_vendor()
 
     port_map = []
     video_ports = []
@@ -253,12 +236,20 @@ def cadastro_portas():
 
     eth_interface = ""
     if has_eth:
-        try:
-            ipaddr_output = subprocess.check_output("ip addr", shell=True).decode("utf-8")
-            messagebox.showinfo("Interfaces detectadas", ipaddr_output)
-        except Exception:
-            pass
-        eth_interface = ask_text("Qual é a interface Ethernet do seu dispositivo? (Ex.: eno2)") or ""
+        detectadas = hal.ethernet_interfaces()
+        if detectadas:
+            messagebox.showinfo(
+                "Interfaces detectadas",
+                "\n".join(f"{name}  --  {desc}" for name, desc in detectadas),
+            )
+        # Quando so' existe uma placa cabeada ela ja' vem preenchida: no
+        # Windows o nome ('Ethernet 6') nao e' obvio para quem esta' na
+        # bancada, e digitar errado reprova o teste de rede inteiro.
+        sugestao = detectadas[0][0] if len(detectadas) == 1 else ""
+        pergunta = "Qual é a interface Ethernet do seu dispositivo?"
+        if sugestao:
+            pergunta += f"\n\n(Detectada apenas uma: {sugestao})"
+        eth_interface = ask_text(pergunta) or sugestao
 
     has_speaker = ask_yes_no("Seu dispositivo possui alto-falante?")
     has_headphone = ask_yes_no("Seu dispositivo possui entrada para fone de ouvido?")
@@ -283,18 +274,17 @@ def cadastro_portas():
         baseline = list_connected_video_ports()
         wait_for_ok(f"Conecte o cabo de vídeo na porta {new_video_port} e clique em OK...")
 
-        if not drm_connectors():
+        if not hal.video_available():
             messagebox.showerror(
                 "Sem driver de vídeo",
-                "Nenhum connector em /sys/class/drm: o driver de vídeo não carregou.\n\n"
-                "Verifique com: dmesg | grep -i 'firmware load'\n\n"
+                f"{hal.NO_VIDEO_DRIVER_HINT}\n\n"
                 "Não é possível cadastrar portas de vídeo neste estado.",
             )
             break
 
         while True:
-            time.sleep(1)  # tempo para o kernel atualizar o status em /sys/class/drm
-            registradas = {drm_connector_name(v.get("entry")) for v in video_ports}
+            time.sleep(1)  # tempo para o SO atualizar o status da saida de video
+            registradas = {hal.video_connector_name(v.get("entry")) for v in video_ports}
             conectadas = list_connected_video_ports()
             novas = (conectadas - baseline) - registradas
 
@@ -385,12 +375,14 @@ def cadastro_portas():
     while new_port:
         wait_for_ok(f"Conecte o pendrive na porta {new_port} e clique em OK...")
 
-        # A porta e' identificada pelo caminho fisico no sysfs, nao pelo texto
-        # do `lsusb -t`: os numeros de bus mudam entre variantes Intel e AMD do
-        # mesmo modelo e chegam a mudar entre boots, conforme a ordem de probe
-        # dos controladores xHCI.
+        # A porta e' identificada pelo caminho fisico -- sysfs no Linux,
+        # location path no Windows -- e nao por indice de enumeracao: os
+        # numeros de bus mudam entre variantes Intel e AMD do mesmo modelo e
+        # chegam a mudar entre boots, conforme a ordem de probe dos
+        # controladores xHCI. O formato do ID muda entre os dois SOs, por isso
+        # o cadastro e' por plataforma (scripts/add_platform_column.sql).
         ja_cadastradas = {f"{p['bus']}/{p['port']}" for p in port_map}
-        encontradas = mass_storage_ports()
+        encontradas = hal.mass_storage_ports()
         detectadas = sorted(pid for pid in encontradas if pid not in ja_cadastradas)
 
         if not detectadas:
@@ -402,8 +394,10 @@ def cadastro_portas():
 
         for port_id in detectadas:
             controlador, cadeia = port_id.split("/", 1)
-            # O painel vem do ACPI _PLD (kernel >= 5.18) e ajuda o operador a
-            # conferir se rotulou o lado certo; nem toda maquina preenche.
+            # Dica de posicao no chassi: ACPI _PLD no Linux (kernel >= 5.18),
+            # ultimo no' ACPI do location path no Windows ('HS10'). Ajuda o
+            # operador a conferir se rotulou o lado certo; nem toda maquina
+            # preenche.
             painel = encontradas.get(port_id)
             lado = f"Lado (ACPI): {painel}" if painel else "Lado (ACPI): nao informado"
             confirm = messagebox.askyesno(
@@ -413,7 +407,7 @@ def cadastro_portas():
             if confirm:
                 port_map.append({"bus": controlador, "port": cadeia, "label": new_port})
                 wait_for_ok("Porta cadastrada com sucesso!\n\nRemova todos os pendrives conectados...")
-                while port_id in mass_storage_port_ids():
+                while port_id in hal.mass_storage_port_ids():
                     time.sleep(1)
 
         new_port = ask_text("Dê um nome para a próxima porta (ou vazio para finalizar)")

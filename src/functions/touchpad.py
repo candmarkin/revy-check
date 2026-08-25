@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 
 from src import app_state
+from src.functions import dev_mode
 
 
 def draw_text(lines, color=(255, 255, 255)):
@@ -130,6 +131,7 @@ def touchpad_step():
     
     while True:
         for event in pygame.event.get():
+            dev_mode.handle(event)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     return log_data

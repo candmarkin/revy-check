@@ -8,6 +8,7 @@ from src import app_state
 from src.functions.gui import draw_text
 from src.functions.save_log import save_log
 from src.functions.system_info import draw_system_info
+from src.functions import dev_mode
 
 
 def screen_step():
@@ -30,6 +31,7 @@ def screen_step():
 
     while running:
         for event in pygame.event.get():
+            dev_mode.handle(event)
             if event.type == pygame.QUIT:
                 if app_state.MODE == "DEV":
                     save_log()

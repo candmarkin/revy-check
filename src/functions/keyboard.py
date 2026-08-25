@@ -9,6 +9,7 @@ from src import app_state
 from src.functions.gui import draw_text
 from src.functions.system_info import draw_system_info
 from src.functions.save_log import save_log
+from src.functions import dev_mode
 
 # Teclas do ABNT2 que o pygame nao expoe como constante. Os valores vem de
 # keycodes.json, capturado na bancada por scripts/collect_keycodes.py.
@@ -270,6 +271,7 @@ def confirm_reprove(missing):
         pygame.display.flip()
 
         for event in pygame.event.get():
+            dev_mode.handle(event)
             if event.type == pygame.QUIT:
                 if app_state.MODE == "DEV":
                     save_log()
@@ -322,6 +324,7 @@ def keyboard_step():
         hold_ms = 0 if esc_down_at is None else pygame.time.get_ticks() - esc_down_at
 
         for event in pygame.event.get():
+            dev_mode.handle(event)
             if event.type == pygame.QUIT:
                 if app_state.MODE == "DEV":
                     save_log()

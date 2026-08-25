@@ -1,9 +1,7 @@
-import subprocess
-
 import mysql.connector
 
+from src import hal
 from src.functions.cadastro import cadastro_portas
-from src.functions.hw_paths import cpu_vendor
 
 
 class DeviceNotRegistered(Exception):
@@ -29,49 +27,57 @@ def fetch_device_info(max_cadastros=1):
     raise DeviceNotRegistered("cadastro do device nao concluido")
 
 
-def _read_dmi():
-    try:
-        manufacturer = subprocess.check_output(
-            "cat /sys/class/dmi/id/sys_vendor", shell=True
-        ).strip().decode("utf-8")
-    except Exception:
-        manufacturer = ""
-    try:
-        if "LENOVO" in str(manufacturer).upper():
-            productname = subprocess.check_output(
-                "cat /sys/class/dmi/id/product_version", shell=True
-            ).strip().decode("utf-8")
-        else:
-            productname = subprocess.check_output(
-                "cat /sys/class/dmi/id/product_name", shell=True
-            ).strip().decode("utf-8")
-    except Exception:
-        productname = "UnknownDevice"
+_WITH_PLATFORM = (
+    "SELECT id, cpu_vendor, platform FROM devices "
+    "WHERE name=%s AND (cpu_vendor=%s OR cpu_vendor IS NULL OR cpu_vendor='') "
+    "AND (platform=%s OR platform IS NULL OR platform='') "
+    "ORDER BY (cpu_vendor IS NULL OR cpu_vendor=''), (platform IS NULL OR platform='') "
+    "LIMIT 1"
+)
 
-    return manufacturer, productname
+_WITHOUT_PLATFORM = (
+    "SELECT id, cpu_vendor FROM devices "
+    "WHERE name=%s AND (cpu_vendor=%s OR cpu_vendor IS NULL OR cpu_vendor='') "
+    "ORDER BY (cpu_vendor IS NULL OR cpu_vendor='') LIMIT 1"
+)
 
 
 def _find_device(cursor, productname, vendor):
-    """Registro do modelo, preferindo a linha da variante de CPU correta.
+    """Registro do modelo, preferindo a linha da variante correta.
 
-    O DMI nao distingue as variantes Intel e AMD do mesmo modelo comercial (um
-    T14 Gen 1 se identifica como 'ThinkPad T14 Gen 1' nos dois casos), mas a
-    topologia USB e os connectors DRM sao diferentes. A linha com `cpu_vendor`
-    preenchido ganha; a linha sem vendor serve de fallback para os cadastros
-    feitos antes desta coluna existir.
+    Dois eixos desempatam o mesmo nome de modelo:
+
+    - `cpu_vendor`: o DMI nao distingue as variantes Intel e AMD do mesmo
+      modelo comercial (um T14 Gen 1 se identifica como 'ThinkPad T14 Gen 1'
+      nos dois casos), mas a topologia USB e os connectors de video sao
+      diferentes.
+    - `platform`: a mesma porta fisica tem nomes diferentes em cada SO
+      ('0000:00:14.0/3.2' no Linux, 'PCIROOT(0)#PCI(1400)/3.2' no Windows).
+      Um cadastro do outro SO reprovaria todas as portas.
+
+    Em ambos, a linha preenchida ganha e a vazia serve de fallback para os
+    cadastros feitos antes da coluna existir.
     """
-    cursor.execute(
-        "SELECT id, cpu_vendor FROM devices "
-        "WHERE name=%s AND (cpu_vendor=%s OR cpu_vendor IS NULL OR cpu_vendor='') "
-        "ORDER BY (cpu_vendor IS NULL OR cpu_vendor='') LIMIT 1",
-        (productname, vendor),
-    )
-    return cursor.fetchone()
+    try:
+        cursor.execute(_WITH_PLATFORM, (productname, vendor, hal.PLATFORM))
+        return cursor.fetchone()
+    except mysql.connector.Error as exc:
+        # Banco ainda sem a migracao (scripts/add_platform_column.sql). Sem o
+        # filtro o cadastro do outro SO pode ser escolhido -- por isso o aviso.
+        if exc.errno != 1054:  # ER_BAD_FIELD_ERROR
+            raise
+        print(
+            "AVISO: tabela devices sem a coluna 'platform'. "
+            "Rode scripts/add_platform_column.sql: sem ela um cadastro feito "
+            "em outro sistema operacional pode ser usado por engano."
+        )
+        cursor.execute(_WITHOUT_PLATFORM, (productname, vendor))
+        return cursor.fetchone()
 
 
 def _fetch_device_info_once():
-    manufacturer, productname = _read_dmi()
-    vendor = cpu_vendor()
+    manufacturer, productname = hal.dmi()
+    vendor = hal.cpu_vendor()
 
     conn = mysql.connector.connect(
         host="10.3.0.12",
@@ -95,6 +101,11 @@ def _fetch_device_info_once():
                 print(
                     f"AVISO: cadastro de '{productname}' nao tem cpu_vendor. "
                     "Portas USB/video podem estar erradas se este modelo tiver variante Intel e AMD."
+                )
+            if "platform" in device and not device.get("platform"):
+                print(
+                    f"AVISO: cadastro de '{productname}' nao tem platform. "
+                    f"Se ele foi feito em outro SO, as portas nao vao casar em {hal.PLATFORM}."
                 )
 
         with conn.cursor(dictionary=True, buffered=True) as cursor:

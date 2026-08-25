@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke test do RevyCheck para rodar via SSH (headless, sem X).
+"""Smoke test do RevyCheck, headless, em Linux e Windows.
 
 Valida as dependencias e a parte NAO interativa de cada passo do app
 (conexao com banco, NTP, deteccao de hardware, etc.) sem abrir a tela
@@ -7,20 +7,21 @@ fullscreen. Cada checagem tem timeout proprio, entao nunca trava - os
 passos interativos do app (*_step, wait_for_db_connection) tem loop
 infinito e por isso aqui testamos as funcoes de deteccao por baixo deles.
 
+A deteccao de hardware passa por `src.hal`, entao este script exercita o
+mesmo caminho que o app usa em cada SO.
+
 Uso:
-    ssh vistoria@bancada
-    cd ~/revy-check
-    python3 scripts/smoke_test.py
+    python3 scripts/smoke_test.py      # Linux (pode rodar por SSH)
+    python scripts/smoke_test.py       # Windows
 
 Codigo de saida: 0 se nenhum FAIL, 1 se houver qualquer FAIL.
 FAIL  = bloqueia o app (precisa consertar).
-WARN  = pode falhar no SSH sem hardware/audio/display (informativo).
+WARN  = pode falhar sem hardware/audio/display presente (informativo).
 """
 
-import contextlib
 import os
-import signal
 import sys
+import threading
 from pathlib import Path
 
 # --- headless: pygame/mixer/font funcionam sem servidor X ---
@@ -40,36 +41,38 @@ class StepTimeout(Exception):
     pass
 
 
-# SIGALRM so existe no Unix. Sem ele nao ha' timeout nenhum, e uma checagem
-# travada segura o script inteiro - por isso o aviso no cabecalho.
-TIMEOUTS_ENABLED = hasattr(signal, "SIGALRM")
-
-
-@contextlib.contextmanager
-def time_limit(seconds):
-    """Aborta a checagem se passar de `seconds` (usa SIGALRM, so Linux)."""
-    def _handler(signum, frame):
-        raise StepTimeout(f"timeout apos {seconds}s")
-
-    if TIMEOUTS_ENABLED:
-        old = signal.signal(signal.SIGALRM, _handler)
-        signal.alarm(seconds)
-    try:
-        yield
-    finally:
-        if TIMEOUTS_ENABLED:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, old)
-
-
 RESULTS = []
+
+
+def run_with_timeout(fn, seconds):
+    """Roda `fn` numa thread e desiste depois de `seconds`.
+
+    A versao anterior usava SIGALRM, que so existe no Unix -- no Windows o
+    timeout ficava desligado e uma checagem travada segurava o script inteiro.
+    A thread fica orfa se estourar o tempo (e daemon), mas o relatorio sai.
+    """
+    box = {}
+
+    def target():
+        try:
+            box["value"] = fn()
+        except BaseException as exc:  # noqa: BLE001 - o smoke test relata tudo
+            box["error"] = exc
+
+    thread = threading.Thread(target=target, daemon=True)
+    thread.start()
+    thread.join(seconds)
+    if thread.is_alive():
+        raise StepTimeout(f"timeout apos {seconds}s")
+    if "error" in box:
+        raise box["error"]
+    return box.get("value")
 
 
 def check(name, fn, timeout=10, severity="FAIL"):
     """Roda fn(); registra PASS, ou (WARN|FAIL) conforme `severity`."""
     try:
-        with time_limit(timeout):
-            detail = fn()
+        detail = run_with_timeout(fn, timeout)
         RESULTS.append(("PASS", name, detail or "ok"))
     except Exception as exc:  # noqa: BLE001 - smoke test quer capturar tudo
         RESULTS.append((severity, name, f"{type(exc).__name__}: {exc}"))
@@ -150,14 +153,17 @@ def c_sounddevice():
     return f"{len(devs)} devices ({ins} in, {outs} out)"
 
 
-def c_pulse_headphone():
-    from src.functions.audio import headphone_connected
+def c_jack():
+    from src.functions.audio import headphone_connected, jack_detection_available
+    if not jack_detection_available():
+        raise RuntimeError("sem deteccao de jack; o app vai perguntar ao operador")
     return f"headphone_connected() -> {headphone_connected()}"
 
 
 def c_camera():
     import cv2
-    cap = cv2.VideoCapture(0)
+    from src import hal
+    cap = cv2.VideoCapture(0, hal.camera_backend())
     try:
         if not cap.isOpened():
             raise RuntimeError("camera 0 nao abriu")
@@ -170,32 +176,29 @@ def c_camera():
 
 
 def c_ethernet():
-    import subprocess
-    from src.functions.ethernet import ethernet_connected
-    out = subprocess.check_output(["ip", "-o", "link", "show"], text=True)
-    ifaces = [ln.split(":")[1].strip() for ln in out.splitlines()]
-    eth = next((i for i in ifaces if i.startswith(("en", "eth"))), None)
-    if not eth:
-        raise RuntimeError(f"nenhuma interface eth/en em {ifaces}")
-    return f"{eth} carrier={ethernet_connected(eth)}"
+    from src import hal
+    interfaces = hal.ethernet_interfaces()
+    if not interfaces:
+        raise RuntimeError("nenhuma interface cabeada detectada")
+    return ", ".join(
+        f"{name} carrier={hal.ethernet_connected(name)}" for name, _ in interfaces
+    )
 
 
 def c_usb():
-    import subprocess
-    out = subprocess.check_output(["lsusb", "-t"], text=True)
-    return f"lsusb -t ok ({len(out.splitlines())} linhas)"
+    from src import hal
+    lines = hal.usb_topology()
+    ports = hal.mass_storage_ports()
+    return f"{len(lines)} nos USB; mass storage em {sorted(ports) or 'nenhuma porta'}"
 
 
 def c_video_ports():
-    drm = Path("/sys/class/drm")
-    if not drm.is_dir():
-        raise RuntimeError("/sys/class/drm ausente")
-    entries = []
-    for st in drm.glob("*/status"):
-        entries.append(f"{st.parent.name}={st.read_text().strip()}")
-    if not entries:
-        raise RuntimeError("nenhum conector DRM")
-    return ", ".join(entries)
+    from src import hal
+    if not hal.video_available():
+        raise RuntimeError(hal.NO_VIDEO_DRIVER_HINT)
+    externas = [e for e in hal.video_entries() if not hal.is_internal_panel(e)]
+    conectadas = hal.connected_video_ports()
+    return f"{len(externas)} saidas, conectadas: {sorted(conectadas) or 'nenhuma'}"
 
 
 def c_wifi():
@@ -215,11 +218,10 @@ def c_wifi():
 # execucao
 # --------------------------------------------------------------------------
 def main():
+    from src import hal
+
     print("=" * 64)
-    print("RevyCheck - smoke test (headless / SSH)")
-    if not TIMEOUTS_ENABLED:
-        print(f"AVISO: sem SIGALRM em {sys.platform} - timeouts DESATIVADOS.")
-        print("       Uma checagem travada nao aborta sozinha.")
+    print(f"RevyCheck - smoke test (headless) - backend: {hal.PLATFORM}")
     print("=" * 64)
 
     # ordem = ordem do fluxo real do app (main.py)
@@ -231,11 +233,11 @@ def main():
     check("ntp             (consulta_ntp)",   c_ntp,            timeout=8)
     check("audio           (mixer+tom)",      c_audio_mixer,    timeout=10, severity="WARN")
     check("audio_devices   (sounddevice)",    c_sounddevice,    timeout=10, severity="WARN")
-    check("audio_headphone (pulsectl)",       c_pulse_headphone, timeout=8, severity="WARN")
+    check("audio_headphone (jack)",           c_jack,           timeout=8,  severity="WARN")
     check("camera          (cv2 VideoCapture)", c_camera,       timeout=12, severity="WARN")
     check("ethernet        (carrier)",        c_ethernet,       timeout=8,  severity="WARN")
-    check("usb             (lsusb -t)",       c_usb,            timeout=8)
-    check("video_ports     (/sys/class/drm)", c_video_ports,    timeout=8,  severity="WARN")
+    check("usb             (portas fisicas)", c_usb,            timeout=8)
+    check("video_ports     (saidas de video)", c_video_ports,   timeout=8,  severity="WARN")
     check("wifi            (detect+status)",  c_wifi,           timeout=15, severity="WARN")
 
     print()
@@ -254,9 +256,9 @@ def main():
     print(f"resumo: {passes} PASS, {warns} WARN, {fails} FAIL")
     print("-" * 64)
     if fails:
-        print("!! Ha FAIL(s) que bloqueiam o app. Corrija antes do startx.")
+        print("!! Ha FAIL(s) que bloqueiam o app. Corrija antes de rodar o main.py.")
     else:
-        print("OK: nenhum bloqueador. WARN sao esperados no SSH sem hw/audio/display.")
+        print("OK: nenhum bloqueador. WARN sao esperados sem hw/audio/display.")
 
     return 1 if fails else 0
 
