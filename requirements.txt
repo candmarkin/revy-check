@@ -9,7 +9,9 @@ pygame>=2.1.4,<3.0.0
 numpy>=1.21.0
 sounddevice>=0.4.6,<1.0.0
 opencv-python>=4.6
-mysql-connector-python>=8.0.0,<9.0.0
+# O agente nao fala mais com o MySQL: quem fala e' a API Revy
+# (/revy-check/*), para nao embutir credencial de banco no binario.
+requests>=2.31
 ntplib
 psutil>=5.9
 

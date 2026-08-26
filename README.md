@@ -53,6 +53,39 @@ Duas coisas exigem privilégio de administrador e degradam sozinhas sem ele:
 ajustar o relógio pelo NTP e alguns caminhos de rede. O resto funciona como
 usuário normal.
 
+### Configuração (obrigatória)
+
+O agente não carrega segredo nenhum no código nem no binário. Copie o template
+e preencha:
+
+```powershell
+copy revycheck.env.example revycheck.env
+```
+
+O arquivo fica **ao lado do executável** (ou na raiz do repo, em dev) e é lido
+em tempo de execução. Variável de ambiente tem precedência. Sem
+`REVYCHECK_API_KEY` o app não inicia.
+
+A chave vem do `REVYCHECK_API_KEY` do `.env` de `Revy/apps/api`, e abre só as
+rotas `/revy-check/*` — não é a chave mestra da API. Se um binário vazar,
+rotaciona-se essa chave sozinha, editando um arquivo, sem rebuild.
+
+`REVYCHECK_DEV_PASSWORD` vazio **desabilita o modo DEV**, que é o que se quer
+numa bancada de produção: em DEV dá para aprovar teste na mão.
+
+### Como o agente fala com o banco
+
+Não fala. Toda persistência passa pela API Revy:
+
+| Rota | Quando |
+|---|---|
+| `POST /revy-check/buscamodelo` | início, para saber portas e recursos do modelo |
+| `POST /revy-check/cadastrar` | quando o modelo ainda não existe no catálogo |
+| `POST /revy-check/testefinal` | no fim, com o log do checklist |
+
+As rotas vivem em `Revy/apps/api` (`functions/revycheck.py` + o
+`router_revycheck` no `main.py`).
+
 ### Cadastro de portas por sistema operacional
 
 A mesma porta física tem nomes diferentes em cada SO (`0000:00:14.0/3.2` no
@@ -60,14 +93,9 @@ Linux, `PCIROOT(0)#PCI(1400)/3.2` no Windows), e as saídas de vídeo idem. Um
 equipamento cadastrado na linha Debian **não** casa na linha Windows: cada
 modelo precisa de um cadastro por SO.
 
-Rode a migração uma vez no banco antes de cadastrar modelos no Windows:
-
-```bash
-mysql -h 10.3.0.12 -u drack -p revycheck < scripts/add_platform_column.sql
-```
-
-Sem ela o app ainda roda, mas avisa no console e pode escolher o cadastro do
-outro SO por engano.
+A coluna `platform` já existe no banco (`scripts/add_platform_column.sql`, já
+aplicada). O agente envia a plataforma em toda busca e todo cadastro, e a API
+filtra por ela.
 
 ### Gerar o executável
 
@@ -147,7 +175,8 @@ O fluxo principal está em `src/main.py` e as responsabilidades específicas fic
 Por padrão o aplicativo inicia com `MODE = "PROD"` em `src/main.py`.
 
 - Para destravar o modo DEV durante a execução, pressione a hotkey: Ctrl (esq) + Shift (esq) + d + v
-- Quando solicitado, digite a senha DEV (valor padrão: `dev123` em `src/main.py`).
+- Quando solicitado, digite a senha DEV (`REVYCHECK_DEV_PASSWORD` no `revycheck.env`).
+- Sem essa variável preenchida o modo DEV fica **desabilitado**: a hotkey não destrava nada.
 
 No modo DEV, o app permite fechar com ESC e salva o log antes de sair.
 
@@ -180,6 +209,8 @@ fazer nada, então não há como um operador dispará-los na linha.
     wlanapi (WiFi), tudo por `ctypes`/`winreg`
   - o backend é escolhido por `sys.platform` no import; os steps de teste não
     sabem em qual SO estão rodando
+- `src/config.py` — configuração e segredos, lidos do `revycheck.env`/ambiente
+- `src/api_client.py` — cliente das rotas `/revy-check/*` da API Revy
 - `src/functions/` — os passos do checklist e a interface
   - `device_info.py` — devolve configuração do equipamento (mapa de portas, flags)
   - `usb.py` — detecção de presença em portas USB

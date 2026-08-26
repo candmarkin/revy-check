@@ -6,11 +6,14 @@
 #
 # O executavel sai em dist/RevyCheck.exe.
 #
-# ATENCAO antes de distribuir: as credenciais do MySQL e do SMB estao no
-# codigo-fonte. Um bundle do PyInstaller e' trivialmente extraivel
-# (`pyi-archive_viewer dist/RevyCheck.exe`), entao o .exe carrega as senhas em
-# claro para toda maquina onde for instalado. Ver a secao de seguranca do
-# WINDOWS.md.
+# O binario NAO carrega segredo nenhum: a URL e a chave da API, a senha do DEV
+# e as credenciais de SMB vem do `revycheck.env`, que fica ao lado do
+# executavel e nao entra no bundle. Isso e' de proposito -- um bundle do
+# PyInstaller e' trivialmente extraivel (`pyi-archive_viewer
+# dist/RevyCheck.exe`), entao tudo que for compilado junto vaza. Rotacionar a
+# chave passa a ser editar um arquivo no compartilhamento, sem rebuild.
+#
+# NAO adicione `revycheck.env` em `datas`.
 
 a = Analysis(
     ['src\\main.py'],
@@ -20,16 +23,7 @@ a = Analysis(
         ('keycodes.json', '.'),
         ('assets', 'assets'),
     ],
-    hiddenimports=[
-        # O mysql-connector carrega os plugins de autenticacao e as locales por
-        # nome, em runtime: o PyInstaller nao os enxerga na analise estatica e o
-        # .exe morre no primeiro connect com "Authentication plugin ... not
-        # supported".
-        'mysql.connector.plugins',
-        'mysql.connector.plugins.mysql_native_password',
-        'mysql.connector.plugins.caching_sha2_password',
-        'mysql.connector.locales.eng.client_error',
-    ],
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

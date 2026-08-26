@@ -1,18 +1,33 @@
 import json
 import sys
 import time
-from datetime import datetime
 
-import mysql.connector
 import pygame
 
-from src import app_state, hal
+from src import api_client, app_state, config, hal
 from src.functions.gui import draw_text
 
 
+def _caminho_log_local():
+    """Onde gravar a copia local do log.
+
+    Caminho absoluto derivado do executavel, e nao relativo: rodando de um
+    compartilhamento UNC o `cmd.exe` nao aceita UNC como diretorio atual e cai
+    para `C:\\Windows`, entao o log ia parar num lugar indefinido da maquina
+    que vai para o cliente.
+    """
+    return config.base_dir() / "checklist_log.json"
+
+
 def save_log():
-    with open("checklist_log.json", "w") as f:
-        json.dump(app_state.LOG_DATA, f, indent=2)
+    destino = _caminho_log_local()
+    try:
+        with open(destino, "w", encoding="utf-8") as f:
+            json.dump(app_state.LOG_DATA, f, indent=2, ensure_ascii=False)
+    except OSError as exc:
+        # Share somente-leitura e' o caso normal em producao; o envio para a
+        # API e' que importa, a copia local e' conveniencia de depuracao.
+        print(f"Nao foi possivel gravar {destino}: {exc}")
 
     app_state.SCREEN.fill((255, 255, 255))
     font_small = pygame.font.SysFont("Consolas", 10)
@@ -59,50 +74,25 @@ def save_log():
         time.sleep(2)
         return "Envio cancelado"
 
-    def try_save_log_to_db():
-        conn2 = None
-        cursor = None
+    def try_send_log():
+        """Envia o log para /revy-check/testefinal.
 
+        A API insere tudo numa transacao so', entao repetir depois de uma falha
+        de rede nao duplica os passos que ja' entraram.
+        """
         try:
-            conn2 = mysql.connector.connect(
-                host="10.3.0.12",
-                user="drack",
-                password="jdVg2dF2@",
-                database="revycheck",
+            resposta = api_client.enviar_teste_final(
+                hal.serial_number(), app_state.LOG_DATA
             )
-            cursor = conn2.cursor()
+        except api_client.ApiError as exc:
+            return False, str(exc)
 
-            device_serial = hal.serial_number()
-
-            for entry in app_state.LOG_DATA:
-                step = entry.get("step", "")
-                time_str = entry.get("time", None)
-                if time_str:
-                    try:
-                        time_val = datetime.fromisoformat(time_str)
-                    except Exception:
-                        time_val = datetime.now()
-                else:
-                    time_val = datetime.now()
-                approved = entry.get("result", "REPROVADO") == "APROVADO"
-
-                cursor.execute(
-                    "INSERT INTO logs (device_serial, step, time, approved) VALUES (%s, %s, %s, %s)",
-                    (device_serial, step, time_val, approved),
-                )
-
-            conn2.commit()
-            return True, "Log salvo com sucesso!"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if cursor is not None:
-                cursor.close()
-            if conn2 is not None:
-                conn2.close()
+        gravados = resposta.get("inserted", 0)
+        reprovados = resposta.get("reprovados", 0)
+        return True, f"Log enviado: {gravados} passos, {reprovados} reprovados."
 
     while True:
-        success, result = try_save_log_to_db()
+        success, result = try_send_log()
 
         if success:
             draw_text(["✅ Log salvo com sucesso!"], (0, 180, 0))
@@ -115,9 +105,9 @@ def save_log():
         cancel_retry_btn = pygame.Rect(app_state.WIDTH // 2 + 20, app_state.HEIGHT - 80, 140, 50)
 
         if app_state.MODE == "DEV":
-            msg_lines = ["Erro ao salvar log no BD:", str(result)]
+            msg_lines = ["Erro ao enviar o log:", str(result)]
         else:
-            msg_lines = ["Erro ao salvar log no BD!"]
+            msg_lines = ["Erro ao enviar o log!"]
 
         draw_text(msg_lines, (255, 0, 0))
 

@@ -11,7 +11,7 @@ HEIGHT = 0
 FONT = None
 CLOCK = None
 MODE = "PROD"
-DEV_PASSWORD = "dev123"
+DEV_PASSWORD = ""  # preenchido por main.init_app_state a partir de src.config
 DEV_HOTKEY = set()
 
 LOG_DATA: List[Dict[str, Any]] = []

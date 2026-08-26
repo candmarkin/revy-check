@@ -83,8 +83,8 @@ def check(name, fn, timeout=10, severity="FAIL"):
 # --------------------------------------------------------------------------
 def c_deps():
     import cv2
-    import mysql.connector  # noqa: F401
     import ntplib  # noqa: F401
+    import requests  # noqa: F401
     import numpy
     import pygame
     import sounddevice  # noqa: F401
@@ -104,14 +104,13 @@ def c_pygame_init():
     return f"init ok, surface {surf.get_size()}"
 
 
-DB = dict(host="10.3.0.12", user="drack", password="jdVg2dF2@", database="revycheck")
-
-
-def c_db():
-    import mysql.connector
-    conn = mysql.connector.connect(connection_timeout=5, **DB)
-    conn.close()
-    return f"conectou em {DB['host']}"
+def c_api():
+    """A API substituiu o acesso direto ao MySQL: nenhuma credencial de banco
+    vive mais no agente, so' a chave de /revy-check/*."""
+    from src import api_client, config
+    if not api_client.disponivel():
+        raise RuntimeError(f"sem resposta de {config.api_url()}")
+    return f"respondeu em {config.api_url()}"
 
 
 def c_device_info():
@@ -227,7 +226,7 @@ def main():
     # ordem = ordem do fluxo real do app (main.py)
     check("deps            (imports)",        c_deps,           timeout=20)
     check("pygame          (init+font)",      c_pygame_init,    timeout=15)
-    check("db              (mysql 10.3.0.12)", c_db,            timeout=8)
+    check("api             (/revy-check)",     c_api,           timeout=10)
     check("device_info     (fetch_device_info)", c_device_info, timeout=12)
     check("system_info     (get_system_info)", c_system_info,   timeout=10)
     check("ntp             (consulta_ntp)",   c_ntp,            timeout=8)

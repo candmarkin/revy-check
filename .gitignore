@@ -22,3 +22,7 @@ venv/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Config local do agente (contem a chave da API)
+revycheck.env
+.revycheck-key.tmp

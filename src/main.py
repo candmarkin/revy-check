@@ -10,7 +10,7 @@ if __package__ in (None, ""):
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-from src import app_state, hal
+from src import app_state, config, hal
 from src.functions.app_flow import prompt_password, start_step, wait_for_db_connection
 from src.functions.audio import (
     headphone_connected,
@@ -39,7 +39,7 @@ from src.functions.wifi import WiFiTest
 
 def init_app_state():
     app_state.MODE = "DEV" if "--dev" in sys.argv else "PROD"
-    app_state.DEV_PASSWORD = "dev123"
+    app_state.DEV_PASSWORD = config.dev_password()
 
     pygame.init()
     info = pygame.display.Info()
@@ -132,7 +132,11 @@ def main():
 
                     if app_state.DEV_HOTKEY.issubset(pressed_keys) and app_state.MODE == "PROD":
                         pswd = prompt_password()
-                        if pswd == app_state.DEV_PASSWORD:
+                        # Senha vazia = DEV desabilitado. Antes o default
+                        # 'dev123' vinha no codigo: quem lesse o fonte (ou
+                        # extraisse o binario) destravava o DEV na bancada e
+                        # aprovava teste na mao.
+                        if app_state.DEV_PASSWORD and pswd == app_state.DEV_PASSWORD:
                             print("DEV MODE UNLOCKED via hotkey!")
                             app_state.MODE = "DEV"
                         else:

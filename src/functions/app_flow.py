@@ -1,9 +1,8 @@
 import sys
 
-import mysql.connector
 import pygame
 
-from src import app_state
+from src import api_client, app_state
 from src.functions.system_info import draw_system_info
 
 def start_step():
@@ -63,41 +62,32 @@ def start_step():
 
 
 def wait_for_db_connection():
-    try:
-        conn = mysql.connector.connect(
-            host="10.3.0.12",
-            user="drack",
-            password="jdVg2dF2@",
-            database="revycheck",
-        )
-        conn.close()
-        has_conn = True
-    except Exception:
-        has_conn = False
+    """Espera a API responder antes de comecar o fluxo.
 
-    if has_conn:
+    Antes isto abria conexao MySQL direto com credencial no codigo. Agora so'
+    confirma que /revy-check responde e aceita a chave -- se a bancada estiver
+    sem rede, a tela pisca ate' o cabo voltar.
+    """
+    if api_client.disponivel():
         return
 
-    while True:
-        rgb_val = 0
-        try:
-            conn = mysql.connector.connect(
-                host="10.3.0.12",
-                user="drack",
-                password="jdVg2dF2@",
-                database="revycheck",
-            )
-            conn.close()
-            has_conn = True
-        except Exception:
-            app_state.SCREEN.fill((rgb_val, rgb_val, rgb_val))
-            text = app_state.FONT.render("Conecte-se à rede corporativa (Desconecte e reconecte o cabo)", True, (255, 255, 255))
-            app_state.SCREEN.blit(text, ((app_state.WIDTH - text.get_width()) // 2, (app_state.HEIGHT - text.get_height()) // 2))
-            pygame.display.flip()
-            has_conn = False
-            rgb_val += 5
-            if rgb_val > 255:
-                rgb_val = 0
+    rgb_val = 0
+    while not api_client.disponivel():
+        app_state.SCREEN.fill((rgb_val, rgb_val, rgb_val))
+        text = app_state.FONT.render(
+            "Conecte-se a rede corporativa (Desconecte e reconecte o cabo)",
+            True, (255, 255, 255),
+        )
+        app_state.SCREEN.blit(
+            text,
+            ((app_state.WIDTH - text.get_width()) // 2,
+             (app_state.HEIGHT - text.get_height()) // 2),
+        )
+        pygame.display.flip()
+        # O `rgb_val` antes era zerado dentro do laco, entao o fundo nunca
+        # mudava de cor e a tela parecia congelada.
+        rgb_val = (rgb_val + 5) % 256
+        app_state.CLOCK.tick(30)
 
 
 def prompt_password():

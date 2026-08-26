@@ -1,10 +1,9 @@
 import time
 
-import mysql.connector
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 
-from src import hal
+from src import api_client, hal
 
 
 def has_pendrive_connected_cd():
@@ -71,25 +70,14 @@ def wait_for_ok(message):
     messagebox.showinfo("Ação necessária", message)
 
 
-def try_connect_db(cfg):
-    try:
-        conn = mysql.connector.connect(
-            host=cfg["host"],
-            port=cfg["port"],
-            user=cfg["user"],
-            password=cfg["password"],
-            database=cfg["database"],
-            connection_timeout=5,
-        )
-        if conn.is_connected():
-            return True, conn
-        return False, "Não conectado"
-    except Exception as e:
-        return False, str(e)
+def try_connect_api():
+    """Confirma que a API responde antes de comecar o cadastro."""
+    if api_client.disponivel():
+        return True, api_client.config.api_url()
+    return False, f"Sem resposta de {api_client.config.api_url()}"
 
 
-def send_to_db(
-    conn,
+def send_to_api(
     productname,
     vendor,
     has_screen,
@@ -105,69 +93,35 @@ def send_to_db(
     port_map,
     video_ports,
 ):
-    cursor = conn.cursor()
+    """Cadastra o modelo via /revy-check/cadastrar.
+
+    A API insere device e portas numa transacao so': um cadastro que gravasse o
+    device e falhasse nas portas deixaria um modelo que passa na busca e
+    reprova todas as portas no teste seguinte.
+    """
     try:
-        # As portas sao gravadas no formato do SO onde o cadastro foi feito, e
-        # os formatos nao se traduzem entre Linux e Windows -- por isso a
-        # coluna `platform` entra junto. Bancos anteriores a
-        # scripts/add_platform_column.sql caem no INSERT sem ela.
-        columns = (
-            "name, cpu_vendor, type, has_embedded_screen, has_embedded_keyboard, "
-            "has_ethernet, eth_interface, has_speaker, has_headphone_jack, "
-            "has_microphone, has_wifi, has_touchpad, has_camera"
+        resposta = api_client.cadastrar_modelo(
+            product_name=productname,
+            cpu_vendor=vendor,
+            platform=hal.PLATFORM,
+            features={
+                "has_embedded_screen": bool(has_screen),
+                "has_embedded_keyboard": bool(has_keyboard),
+                "has_ethernet": bool(has_eth),
+                "has_speaker": bool(has_speaker),
+                "has_headphone_jack": bool(has_headphone),
+                "has_microphone": bool(has_mic),
+                "has_wifi": bool(has_wifi),
+                "has_touchpad": bool(has_touchpad),
+                "has_camera": bool(has_camera),
+            },
+            eth_interface=eth_interface or "",
+            port_map=port_map,
+            video_ports=video_ports,
         )
-        device_vals = (
-            productname,
-            vendor,
-            "Notebook",
-            1 if has_screen else 0,
-            1 if has_keyboard else 0,
-            1 if has_eth else 0,
-            eth_interface,
-            1 if has_speaker else 0,
-            1 if has_headphone else 0,
-            1 if has_mic else 0,
-            1 if has_wifi else 0,
-            1 if has_touchpad else 0,
-            1 if has_camera else 0,
-        )
-        try:
-            cursor.execute(
-                f"INSERT INTO devices ({columns}, platform) "
-                f"VALUES ({', '.join(['%s'] * (len(device_vals) + 1))})",
-                device_vals + (hal.PLATFORM,),
-            )
-        except mysql.connector.Error as exc:
-            if exc.errno != 1054:  # ER_BAD_FIELD_ERROR
-                raise
-            print(
-                "AVISO: tabela devices sem a coluna 'platform'. "
-                "Rode scripts/add_platform_column.sql."
-            )
-            cursor.execute(
-                f"INSERT INTO devices ({columns}) "
-                f"VALUES ({', '.join(['%s'] * len(device_vals))})",
-                device_vals,
-            )
-        dev_id = cursor.lastrowid
-
-        if port_map:
-            insert_usb = "INSERT INTO device_usb_ports (device_id, bus, port, label) VALUES (%s, %s, %s, %s)"
-            usb_vals = [(dev_id, p["bus"], p["port"], p["label"]) for p in port_map]
-            cursor.executemany(insert_usb, usb_vals)
-
-        if video_ports:
-            insert_vid = "INSERT INTO device_video_ports (device_id, label, entry) VALUES (%s, %s, %s)"
-            vid_vals = [(dev_id, v["label"], v["entry"]) for v in video_ports]
-            cursor.executemany(insert_vid, vid_vals)
-
-        conn.commit()
-        return True, None
-    except Exception as e:
-        conn.rollback()
-        return False, str(e)
-    finally:
-        cursor.close()
+        return True, resposta
+    except api_client.ApiError as exc:
+        return False, str(exc)
 
 
 def list_connected_video_ports():
@@ -182,34 +136,20 @@ def cadastro_portas():
     root.update()
 
     messagebox.showinfo(
-        "Banco de Dados",
-        "Antes de iniciar, vamos conectar ao banco MySQL.\n\n"
+        "Conexão",
+        "Antes de iniciar, vamos conferir a conexão com a API do Revy.\n\n"
         "Se a rede não estiver ativa, conecte e clique em Tentar novamente.",
     )
 
-    db_cfg = {}
-    connected = False
-    db_conn = None
-
-    while not connected:
-        db_cfg["host"] = "10.3.0.12"
-        db_cfg["port"] = 3306
-        db_cfg["user"] = "drack"
-        db_cfg["password"] = "jdVg2dF2@"
-        db_cfg["database"] = "revycheck"
-
-        ok, result = try_connect_db(db_cfg)
+    while True:
+        ok, result = try_connect_api()
         if ok:
-            connected = True
-            db_conn = result
-            messagebox.showinfo(
-                "OK",
-                f"Conectado ao banco {db_cfg['host']}:{db_cfg['port']} -> {db_cfg['database']}",
-            )
+            messagebox.showinfo("OK", f"Conectado em {result}")
             break
         retry = messagebox.askretrycancel(
             "Erro de conexão",
-            f"Falha ao conectar: {result}\n\nConecte a rede (ou verifique dados) e tente novamente.",
+            f"Falha ao conectar: {result}\n\nConecte a rede (ou confira a "
+            f"configuração em revycheck.env) e tente novamente.",
         )
         if not retry:
             messagebox.showwarning("Cancelado", "Operação cancelada pelo usuário. Encerrando.")
@@ -434,8 +374,7 @@ def cadastro_portas():
     confirm = messagebox.askyesno("Resumo", resumo + "\n\nEstá tudo correto?")
 
     if confirm:
-        success, err = send_to_db(
-            db_conn,
+        success, resultado = send_to_api(
             productname,
             vendor,
             has_screen,
@@ -452,16 +391,15 @@ def cadastro_portas():
             video_ports,
         )
         if success:
-            messagebox.showinfo("Sucesso", "Dados inseridos no banco com sucesso!")
+            messagebox.showinfo(
+                "Sucesso",
+                f"Modelo cadastrado (id {resultado.get('device_id')}): "
+                f"{resultado.get('usb_ports', 0)} portas USB e "
+                f"{resultado.get('video_ports', 0)} de vídeo.",
+            )
         else:
-            messagebox.showerror("Erro ao inserir", f"Erro ao inserir no banco: {err}")
+            messagebox.showerror("Erro ao cadastrar", f"Erro ao cadastrar: {resultado}")
     else:
-        messagebox.showinfo("Cancelado", "Cadastro cancelado pelo usuário. Nenhum dado foi enviado ao banco.")
-
-    try:
-        if db_conn:
-            db_conn.close()
-    except Exception:
-        pass
+        messagebox.showinfo("Cancelado", "Cadastro cancelado pelo usuário. Nenhum dado foi enviado.")
 
     root.destroy()

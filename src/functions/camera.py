@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 
-from src import hal
+from src import config, hal
 from src.functions import dev_mode
 
 class CameraTest:
@@ -117,22 +117,25 @@ class CameraTest:
         if not self.photo_path or not os.path.exists(self.photo_path):
             return False, "Nenhuma foto para enviar"
 
-        if not self.smb_config:
-            server = "172.16.48.33"
-            share = "publico/Relatorios/RevyCheck/Camera"
-            username = "marcos"
-            password = "Marquinh0!"
-            remote_path = ""
-        else:
-            server = self.smb_config.get("server", "")
-            share = self.smb_config.get("share", "")
-            username = self.smb_config.get("username", "")
-            password = self.smb_config.get("password", "")
-            remote_path = self.smb_config.get("remote_path", "")
+        cfg = self.smb_config or config.smb_config()
+        if not all([cfg.get("server"), cfg.get("share"),
+                    cfg.get("username"), cfg.get("password")]):
+            return False, "SMB nao configurado (veja revycheck.env)"
 
-        return hal.smb_upload(
-            self.photo_path, server, share, username, password, remote_path
+        ok, mensagem = hal.smb_upload(
+            self.photo_path,
+            cfg["server"], cfg["share"], cfg["username"], cfg["password"],
+            cfg.get("remote_path", ""),
         )
+
+        # A foto e' do rosto do colaborador e a maquina vai para ele. Antes
+        # ficava no diretorio temporario para sempre, mesmo depois do envio.
+        if ok:
+            try:
+                self.photo_path.unlink()
+            except OSError as exc:
+                print(f"Nao foi possivel apagar {self.photo_path}: {exc}")
+        return ok, mensagem
 
     def draw_ui(self, surface, message="", color=(255, 255, 255)):
         """Desenha a interface com preview da câmera"""
