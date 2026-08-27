@@ -349,8 +349,10 @@ def keyboard_step():
                 print(last_key_info)
 
                 if app_state.DEV_HOTKEY.issubset(pressed_keys) and app_state.MODE == "PROD":
-                    print("DEV MODE UNLOCKED via hotkey!")
-                    app_state.MODE = "DEV"
+                    # Aqui nao havia checagem nenhuma: a hotkey ligava o DEV
+                    # direto, e o gate de senha do main.py nao valia neste
+                    # passo. Agora e' o mesmo caminho do resto.
+                    dev_mode.destravar()
 
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_ESCAPE:
@@ -375,6 +377,8 @@ def keyboard_step():
             dev_font = pygame.font.SysFont("Consolas", 22)
             text_surf = dev_font.render(last_key_info, True, (0, 100, 255))
             app_state.SCREEN.blit(text_surf, (20, 20))
+
+        dev_mode.draw_aviso()
 
         pygame.display.flip()
         app_state.CLOCK.tick(60)

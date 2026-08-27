@@ -10,8 +10,8 @@ if __package__ in (None, ""):
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-from src import app_state, config, hal
-from src.functions.app_flow import prompt_password, start_step, wait_for_db_connection
+from src import app_state, hal
+from src.functions.app_flow import start_step, wait_for_db_connection
 from src.functions.audio import (
     headphone_connected,
     jack_detection_available,
@@ -26,6 +26,7 @@ from src.functions.device_info import fetch_device_info
 from src.functions.ethernet import ethernet_step
 from src.functions.gui import ask_operator, draw_text
 from src.functions.keyboard import keyboard_step
+from src.functions.login import tela_de_login
 from src.functions.ntp import consulta_ntp
 from src.functions.save_log import save_log
 from src.functions.screen import screen_step
@@ -38,8 +39,10 @@ from src.functions.wifi import WiFiTest
 
 
 def init_app_state():
-    app_state.MODE = "DEV" if "--dev" in sys.argv else "PROD"
-    app_state.DEV_PASSWORD = config.dev_password()
+    # `--dev` e' pedido, nao permissao: quem libera e' o papel do usuario, e o
+    # login ainda nao aconteceu neste ponto.
+    app_state.MODE = "PROD"
+    app_state.DEV_REQUESTED = "--dev" in sys.argv
 
     pygame.init()
     info = pygame.display.Info()
@@ -65,6 +68,10 @@ def init_app_state():
 def main():
     init_app_state()
     wait_for_db_connection()
+    # Login antes de qualquer chamada: as rotas do checklist autenticam pela
+    # chave do técnico, não por chave embutida no executável.
+    tela_de_login()
+    dev_mode.aplicar_pedido_de_cli()
 
     try:
         app_state.CONFIG = fetch_device_info()
@@ -131,16 +138,7 @@ def main():
                     dev_mode.handle(event)
 
                     if app_state.DEV_HOTKEY.issubset(pressed_keys) and app_state.MODE == "PROD":
-                        pswd = prompt_password()
-                        # Senha vazia = DEV desabilitado. Antes o default
-                        # 'dev123' vinha no codigo: quem lesse o fonte (ou
-                        # extraisse o binario) destravava o DEV na bancada e
-                        # aprovava teste na mao.
-                        if app_state.DEV_PASSWORD and pswd == app_state.DEV_PASSWORD:
-                            print("DEV MODE UNLOCKED via hotkey!")
-                            app_state.MODE = "DEV"
-                        else:
-                            print("Senha incorreta!")
+                        if not dev_mode.destravar():
                             pressed_keys.clear()
 
                 elif event.type == pygame.KEYUP:
@@ -338,6 +336,9 @@ def main():
 
 
 if __name__ == "__main__":
+    # Nao ha' mais config obrigatoria para conferir aqui: o agente nao carrega
+    # segredo, a URL tem default, e a porta de entrada e' a tela de login --
+    # que mostra na tela quando a API nao responde, em vez de fechar calado.
     disable_alt_tab()
     try:
         main()

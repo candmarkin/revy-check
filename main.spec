@@ -13,7 +13,11 @@
 # dist/RevyCheck.exe`), entao tudo que for compilado junto vaza. Rotacionar a
 # chave passa a ser editar um arquivo no compartilhamento, sem rebuild.
 #
-# NAO adicione `revycheck.env` em `datas`.
+# NAO adicione `revycheck.env` em `datas`. Docstring tambem viaja no .pyc, e
+# comentario nao -- ou seja, segredo em docstring vira segredo publicado.
+# Confira o build antes de publicar:
+#
+#     python scripts/verificar_bundle.py
 
 a = Analysis(
     ['src\\main.py'],

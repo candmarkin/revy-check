@@ -104,9 +104,47 @@ def c_pygame_init():
     return f"init ok, surface {surf.get_size()}"
 
 
+def c_config():
+    """Qual arquivo de config o app esta lendo. Nenhum valor e' impresso.
+
+    Na bancada o `.exe` mora numa pasta publica e a config pode vir de outro
+    lugar (%REVYCHECK_ENV%, %PROGRAMDATA%\\RevyCheck, share com ACL). Quando o
+    app "abre e fecha", e' esta linha que diz de onde ele tentou ler.
+
+    Nada aqui e' obrigatorio: o agente nao carrega segredo, e a URL tem
+    default. Sem arquivo nenhum ele fala com a API de producao.
+    """
+    from src import config
+    origem = config.arquivo_em_uso() or "nenhum arquivo; default + variavel de ambiente"
+    return f"{origem} | url={config.api_url()}"
+
+
+def c_login():
+    """Login do tecnico contra /revy-check/login.
+
+    Headless nao tem quem digite senha, entao usa REVYCHECK_SMOKE_EMAIL e
+    REVYCHECK_SMOKE_SENHA quando existirem. Sem elas, os passos que falam com a
+    API dao WARN -- que e' informacao, nao defeito.
+    """
+    from src import api_client
+    email = os.environ.get("REVYCHECK_SMOKE_EMAIL")
+    senha = os.environ.get("REVYCHECK_SMOKE_SENHA")
+    if not email or not senha:
+        raise RuntimeError(
+            "sem REVYCHECK_SMOKE_EMAIL/REVYCHECK_SMOKE_SENHA no ambiente: "
+            "device_info e afins vao dar WARN"
+        )
+    usuario = api_client.login(email, senha)
+    from src.functions import dev_mode
+    dev = "libera DEV" if dev_mode.pode_destravar(usuario) else "sem DEV"
+    return f"{usuario['name']} ({usuario['role']}) | {dev}"
+
+
 def c_api():
-    """A API substituiu o acesso direto ao MySQL: nenhuma credencial de banco
-    vive mais no agente, so' a chave de /revy-check/*."""
+    """Sinal de vida da API, sem login e sem escrever nada.
+
+    Nenhuma credencial de banco vive no agente, e desde o login por tecnico nem
+    chave de API: o que autentica as rotas do checklist e' a chave do usuario."""
     from src import api_client, config
     if not api_client.disponivel():
         raise RuntimeError(f"sem resposta de {config.api_url()}")
@@ -224,10 +262,20 @@ def main():
     print("=" * 64)
 
     # ordem = ordem do fluxo real do app (main.py)
+    #
+    # Sem credencial no ambiente nao ha' sessao, e o que depende de rota
+    # autenticada vira WARN em vez de FAIL: e' limitacao do teste headless, nao
+    # defeito do agente.
+    com_credencial = bool(os.environ.get("REVYCHECK_SMOKE_EMAIL") and
+                          os.environ.get("REVYCHECK_SMOKE_SENHA"))
+    sev_autenticado = "FAIL" if com_credencial else "WARN"
+
+    check("config          (revycheck.env)",  c_config,         timeout=8)
     check("deps            (imports)",        c_deps,           timeout=20)
     check("pygame          (init+font)",      c_pygame_init,    timeout=15)
-    check("api             (/revy-check)",     c_api,           timeout=10)
-    check("device_info     (fetch_device_info)", c_device_info, timeout=12)
+    check("api             (sinal de vida)",  c_api,            timeout=10)
+    check("login           (/revy-check/login)", c_login,       timeout=20, severity=sev_autenticado)
+    check("device_info     (fetch_device_info)", c_device_info, timeout=12, severity=sev_autenticado)
     check("system_info     (get_system_info)", c_system_info,   timeout=10)
     check("ntp             (consulta_ntp)",   c_ntp,            timeout=8)
     check("audio           (mixer+tom)",      c_audio_mixer,    timeout=10, severity="WARN")

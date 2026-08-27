@@ -6,6 +6,7 @@ import pygame
 
 from src import api_client, app_state, config, hal
 from src.functions.gui import draw_text
+from src.functions.login import reautenticar
 
 
 def _caminho_log_local():
@@ -74,22 +75,33 @@ def save_log():
         time.sleep(2)
         return "Envio cancelado"
 
-    def try_send_log():
+    def try_send_log(pode_relogar=True):
         """Envia o log para /revy-check/testefinal.
 
         A API insere tudo numa transacao so', entao repetir depois de uma falha
         de rede nao duplica os passos que ja' entraram.
+
+        401 aqui e' chave de usuario revogada no meio do turno -- o equipamento
+        ja' foi testado, o que falta e' alguem autorizado assinando o envio.
+        Pede login uma vez e tenta de novo, em vez de mandar o tecnico refazer
+        o checklist.
         """
         try:
             resposta = api_client.enviar_teste_final(
                 hal.serial_number(), app_state.LOG_DATA
             )
+        except api_client.NaoAutenticado as exc:
+            if not pode_relogar:
+                return False, f"Sessao recusada: {exc}"
+            reautenticar(str(exc))
+            return try_send_log(pode_relogar=False)
         except api_client.ApiError as exc:
             return False, str(exc)
 
         gravados = resposta.get("inserted", 0)
         reprovados = resposta.get("reprovados", 0)
-        return True, f"Log enviado: {gravados} passos, {reprovados} reprovados."
+        autor = resposta.get("user") or (api_client.usuario() or {}).get("name") or "?"
+        return True, f"Log enviado por {autor}: {gravados} passos, {reprovados} reprovados."
 
     while True:
         success, result = try_send_log()

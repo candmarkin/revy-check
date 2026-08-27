@@ -1,9 +1,14 @@
 """Cliente dos endpoints /revy-check/* da API Revy.
 
-Substitui o acesso direto ao MySQL. O agente roda na bancada, na máquina já
-com a imagem do cliente, e é distribuído como binário — falar com o banco
-exigia embutir a credencial do MySQL no executável. Agora carrega só uma chave
-de API que abre três rotas e é revogável sem rebuild.
+O agente não carrega segredo nenhum. Quem autentica é o técnico: `login()`
+troca e-mail + senha do Revy web pela `key` do usuário, e as chamadas
+seguintes vão com essa chave no header `X-USER-KEY`. A chave fica só em
+memória, morre com o processo, e é revogável no cadastro do usuário.
+
+Antes daqui havia uma chave de API compartilhada dentro do executável. Binário
+distribuído acaba lido (`pyi-archive_viewer` extrai o bundle inteiro), então
+aquela chave era pública na prática, e rotacionar exigia rebuild e
+republicação em toda bancada.
 """
 
 import requests
@@ -19,13 +24,64 @@ class ModeloNaoCadastrado(ApiError):
     """404 do /buscamodelo: o equipamento ainda não existe no catálogo."""
 
 
-def _post(rota, payload, timeout=None):
+class NaoAutenticado(ApiError):
+    """401: sem login, ou a chave do usuário foi revogada no cadastro."""
+
+
+class CredenciaisInvalidas(ApiError):
+    """401 do /login: e-mail ou senha errados."""
+
+
+class LoginBloqueado(ApiError):
+    """429 do /login: tentativas demais para o mesmo e-mail."""
+
+
+# Sessão do turno. Só memória: nada de chave em disco, nem no log, nem no
+# `revycheck.env`. Fecha o app, acabou a sessão.
+_sessao = {"key": None, "name": None, "role": None, "id": None}
+
+
+def usuario():
+    """Quem está logado, ou None."""
+    return dict(_sessao) if _sessao["key"] else None
+
+
+def encerrar_sessao():
+    _sessao.update({"key": None, "name": None, "role": None, "id": None})
+
+
+def login(email, senha):
+    """Troca e-mail + senha do Revy pela chave do usuário e abre a sessão.
+
+    A senha passa uma vez, no login, e não é guardada em lugar nenhum. O que
+    fica é a `key`, que a API valida nas chamadas seguintes.
+    """
+    resposta = _post("login", {"email": email, "senha": senha}, autenticado=False)
+    chave = resposta.get("key")
+    if not chave:
+        raise ApiError("Login sem chave na resposta: API desatualizada?")
+    _sessao.update({
+        "key": chave,
+        "name": resposta.get("name") or email,
+        "role": resposta.get("role") or "",
+        "id": resposta.get("id"),
+    })
+    return usuario()
+
+
+def _post(rota, payload, timeout=None, autenticado=True):
     url = f"{config.api_url()}/{rota}"
+    headers = {}
+    if autenticado:
+        if not _sessao["key"]:
+            raise NaoAutenticado("Sem login nesta sessão.")
+        headers["X-USER-KEY"] = _sessao["key"]
+
     try:
         resposta = requests.post(
             url,
             json=payload,
-            headers={"X-API-KEY": config.api_key()},
+            headers=headers,
             timeout=timeout or config.api_timeout(),
         )
     except requests.RequestException as exc:
@@ -33,8 +89,15 @@ def _post(rota, payload, timeout=None):
 
     if resposta.status_code == 404:
         raise ModeloNaoCadastrado(_detalhe(resposta))
+    if resposta.status_code == 429:
+        raise LoginBloqueado(_detalhe(resposta))
     if resposta.status_code == 401:
-        raise ApiError("Chave de API recusada. Confira REVYCHECK_API_KEY.")
+        # No /login é credencial errada; nas outras rotas é sessão inválida --
+        # chave revogada, ou o app chamou antes de logar.
+        if rota == "login":
+            raise CredenciaisInvalidas(_detalhe(resposta))
+        encerrar_sessao()
+        raise NaoAutenticado(_detalhe(resposta))
     if not resposta.ok:
         raise ApiError(f"HTTP {resposta.status_code}: {_detalhe(resposta)}")
 
@@ -96,15 +159,18 @@ def enviar_teste_final(device_serial, entries):
 
 
 def disponivel():
-    """True se a API responde e aceita a chave.
+    """True se a API responde. Não exige login, e não escreve nada.
 
-    Usado na espera por rede do início do fluxo. Um `buscamodelo` com nome
-    vazio devolve 404 (modelo inexistente), que já prova que a rota respondeu
-    e autenticou — sem escrever nada.
+    É a espera por rede do início do fluxo, que roda ANTES do login: manda um
+    `/login` vazio e aceita qualquer resposta HTTP como sinal de vida. A API
+    devolve 401 para credencial vazia, e 401 já prova que ela respondeu.
+
+    Antes isto era um `buscamodelo` com nome vazio -- que agora exige sessão, e
+    sessão é o que ainda não existe nesse ponto do fluxo.
     """
     try:
-        buscar_modelo("", "", "")
-    except ModeloNaoCadastrado:
+        _post("login", {"email": "", "senha": ""}, autenticado=False)
+    except (CredenciaisInvalidas, LoginBloqueado, ModeloNaoCadastrado):
         return True
     except ApiError:
         return False

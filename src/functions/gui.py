@@ -56,4 +56,7 @@ def draw_text(lines, color=(255, 255, 255)):
     # (teste de cor, teclado, touchpad, camera) ficam de fora justamente para
     # nao sujarem o que esta' sendo avaliado.
     dev_mode.draw_legend()
+    # Resultado da ultima tentativa de destravar o DEV, inclusive negada. Fora
+    # da legenda porque tem de aparecer em PROD tambem.
+    dev_mode.draw_aviso()
     pygame.display.flip()

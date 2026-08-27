@@ -2,7 +2,7 @@ import sys
 
 import pygame
 
-from src import api_client, app_state
+from src import api_client, app_state, config
 from src.functions.system_info import draw_system_info
 
 def start_step():
@@ -64,14 +64,18 @@ def start_step():
 def wait_for_db_connection():
     """Espera a API responder antes de comecar o fluxo.
 
-    Antes isto abria conexao MySQL direto com credencial no codigo. Agora so'
-    confirma que /revy-check responde e aceita a chave -- se a bancada estiver
-    sem rede, a tela pisca ate' o cabo voltar.
+    Roda antes do login: nao exige sessao, so' um sinal de vida da API. Se a
+    bancada estiver sem rede, a tela pisca ate' o cabo voltar.
+
+    Mostra a URL que esta' tentando: quando o problema e' `revycheck.env`
+    apontando para o lugar errado, "conecte o cabo" manda o tecnico procurar
+    defeito onde nao tem.
     """
     if api_client.disponivel():
         return
 
     rgb_val = 0
+    fonte_url = pygame.font.SysFont("Arial", 16)
     while not api_client.disponivel():
         app_state.SCREEN.fill((rgb_val, rgb_val, rgb_val))
         text = app_state.FONT.render(
@@ -83,30 +87,14 @@ def wait_for_db_connection():
             ((app_state.WIDTH - text.get_width()) // 2,
              (app_state.HEIGHT - text.get_height()) // 2),
         )
+        alvo = fonte_url.render(f"tentando {config.api_url()}", True, (170, 170, 170))
+        app_state.SCREEN.blit(
+            alvo,
+            ((app_state.WIDTH - alvo.get_width()) // 2,
+             (app_state.HEIGHT - text.get_height()) // 2 + 50),
+        )
         pygame.display.flip()
         # O `rgb_val` antes era zerado dentro do laco, entao o fundo nunca
         # mudava de cor e a tela parecia congelada.
         rgb_val = (rgb_val + 5) % 256
         app_state.CLOCK.tick(30)
-
-
-def prompt_password():
-    input_text = ""
-    active = True
-    while active:
-        app_state.SCREEN.fill((50, 50, 50))
-        prompt = app_state.FONT.render("Digite senha DEV:", True, (255, 255, 0))
-        app_state.SCREEN.blit(prompt, (50, 200))
-        pygame.display.flip()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT and app_state.MODE == "DEV":
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    active = False
-                elif event.key == pygame.K_BACKSPACE:
-                    input_text = input_text[:-1]
-                else:
-                    input_text += event.unicode
-    return input_text

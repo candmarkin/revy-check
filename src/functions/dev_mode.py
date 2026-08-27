@@ -57,6 +57,15 @@ JUMP_KEY = pygame.K_j
 
 LEGEND = "DEV: Ctrl+Shift+A aprova o passo | Ctrl+Shift+J salta de passo"
 
+# Quem pode destravar o DEV. Vem do `role` que a API devolve no login, nao de
+# senha em arquivo: senha compartilhada em bancada vira folclore, e o DEV
+# permite aprovar teste na mao -- ou seja, aprovar equipamento sem testar.
+# Revogar agora e' mudar o papel do usuario no cadastro, sem tocar em bancada.
+ROLES_DEV = ("admin",)
+
+_AVISO_MS = 4000
+_aviso = None  # (texto, cor, expira_em_ticks)
+
 
 class DevSkip(Exception):
     """Passo aprovado na mao; o fluxo segue para o proximo."""
@@ -72,6 +81,76 @@ class DevJump(Exception):
 
 def active():
     return app_state.MODE == "DEV"
+
+
+def pode_destravar(usuario=None):
+    """O papel do usuario logado autoriza o DEV?"""
+    usuario = usuario if usuario is not None else (app_state.USER or {})
+    return usuario.get("role") in ROLES_DEV
+
+
+def destravar():
+    """Liga o DEV para quem esta' logado, se o papel permitir.
+
+    Antes disto era senha compartilhada no `revycheck.env` -- e o teste de
+    teclado nem pedia senha, so' ligava o DEV na hotkey. Agora a decisao e' uma
+    so', aqui, com base no `role` que veio do login, e cada liberacao entra no
+    log do checklist com nome e papel.
+    """
+    global _aviso
+    if app_state.MODE == "DEV":
+        return True
+
+    usuario = app_state.USER or {}
+    nome = usuario.get("name") or "sem login"
+    papel = usuario.get("role") or "sem papel"
+
+    if not pode_destravar(usuario):
+        _aviso = (f"DEV negado: {nome} ({papel})", (255, 120, 120),
+                  pygame.time.get_ticks() + _AVISO_MS)
+        print(f"DEV negado para {nome} ({papel}); precisa de {'/'.join(ROLES_DEV)}")
+        return False
+
+    app_state.MODE = "DEV"
+    app_state.add_log({
+        "step": "DEV_MODE",
+        "time": app_state.now_iso(),
+        "result": "APROVADO",
+        "detalhe": f"destravado por {nome} ({papel})",
+    })
+    _aviso = (f"DEV liberado: {nome}", (120, 255, 160),
+              pygame.time.get_ticks() + _AVISO_MS)
+    print(f"DEV MODE UNLOCKED por {nome} ({papel})")
+    return True
+
+
+def aplicar_pedido_de_cli():
+    """Resolve o `--dev` da linha de comando, depois do login.
+
+    O flag e' pedido, nao permissao: numa bancada, um atalho com `--dev` daria
+    DEV a qualquer um que clicasse nele.
+    """
+    if not app_state.DEV_REQUESTED:
+        return False
+    return destravar()
+
+
+def draw_aviso():
+    """Faixa curta com o resultado da ultima tentativa de destravar.
+
+    Existe porque o `.exe` e' `console=False`: sem isto, negar o DEV nao dava
+    sinal nenhum na tela e parecia que a hotkey nao funcionou.
+    """
+    global _aviso
+    if not _aviso or app_state.SCREEN is None:
+        return
+    texto, cor, expira = _aviso
+    if pygame.time.get_ticks() > expira:
+        _aviso = None
+        return
+    fonte = pygame.font.SysFont("Consolas", 18, bold=True)
+    render = fonte.render(texto, True, cor)
+    app_state.SCREEN.blit(render, render.get_rect(center=(app_state.WIDTH // 2, 30)))
 
 
 def _is_combo(event, key):

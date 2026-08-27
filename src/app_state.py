@@ -11,8 +11,14 @@ HEIGHT = 0
 FONT = None
 CLOCK = None
 MODE = "PROD"
-DEV_PASSWORD = ""  # preenchido por main.init_app_state a partir de src.config
+# `--dev` na linha de comando: pedido de DEV, resolvido depois do login por
+# functions.dev_mode. Flag sozinho nao libera nada.
+DEV_REQUESTED = False
 DEV_HOTKEY = set()
+
+# Técnico logado ({id, name, role, key}) ou None. Quem preenche é
+# functions.login; a chave existe só aqui, em memória, nunca em disco.
+USER: Dict[str, Any] | None = None
 
 LOG_DATA: List[Dict[str, Any]] = []
 CONFIG: Dict[str, Any] = {}
