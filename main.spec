@@ -6,12 +6,14 @@
 #
 # O executavel sai em dist/RevyCheck.exe.
 #
-# O binario NAO carrega segredo nenhum: a URL e a chave da API, a senha do DEV
-# e as credenciais de SMB vem do `revycheck.env`, que fica ao lado do
-# executavel e nao entra no bundle. Isso e' de proposito -- um bundle do
-# PyInstaller e' trivialmente extraivel (`pyi-archive_viewer
-# dist/RevyCheck.exe`), entao tudo que for compilado junto vaza. Rotacionar a
-# chave passa a ser editar um arquivo no compartilhamento, sem rebuild.
+# O binario NAO carrega segredo: a chave da API, a senha do DEV e as
+# credenciais de SMB vem do `revycheck.env`, que fica ao lado do executavel
+# e nao entra no bundle. Unica excecao: a URL da API e' embutida no boot via
+# `revycheck_api_url_hook.py` (endereco nao e' segredo). Isso e' de
+# proposito -- um bundle do PyInstaller e' trivialmente extraivel
+# (`pyi-archive_viewer dist/RevyCheck.exe`), entao tudo que for compilado
+# junto vaza. Rotacionar a chave passa a ser editar um arquivo no
+# compartilhamento, sem rebuild.
 #
 # NAO adicione `revycheck.env` em `datas`. Docstring tambem viaja no .pyc, e
 # comentario nao -- ou seja, segredo em docstring vira segredo publicado.
@@ -28,9 +30,13 @@ a = Analysis(
         ('assets', 'assets'),
     ],
     hiddenimports=[],
-    hookspath=[],
+    runtime_hooks=[
+        # Fixa REVYCHECK_API_URL=http://10.3.0.116/revy-check no boot do exe,
+        # com precedencia de variavel de ambiente (vence revycheck.env).
+        'revycheck_api_url_hook.py',
+    ],
     hooksconfig={},
-    runtime_hooks=[],
+    hookspath=[],
     excludes=[
         # Backend do outro SO: importa pulsectl e so' existe no Linux.
         'src.hal.linux',

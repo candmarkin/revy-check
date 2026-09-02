@@ -24,7 +24,6 @@ from src.hal import (
     _win_display,
     _win_kiosk,
     _win_net,
-    _win_smb,
     _win_usb,
     _win_wifi,
 )
@@ -353,10 +352,6 @@ def photos_dir():
     path = Path(tempfile.gettempdir()) / "revy_photos"
     path.mkdir(parents=True, exist_ok=True)
     return path
-
-
-smb_upload = _win_smb.upload
-
 
 def camera_backend():
     """Backend do OpenCV. O padrao no Windows escolhe mal e abre lento."""

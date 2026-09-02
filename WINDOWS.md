@@ -27,7 +27,6 @@ src/hal/
     _win_audio.py     estado do jack (registro MMDevices)
     _win_net.py       adaptadores de rede (registro + psutil)
     _win_wifi.py      Native Wifi API (wlanapi)
-    _win_smb.py       envio de foto por SMB
     _win_kiosk.py     trava de atalhos (hook WH_KEYBOARD_LL)
 ```
 
@@ -154,8 +153,7 @@ em vez de fingir que ligou.
 | Interfaces cabeadas | `/sys/class/net/*` | registro da classe de rede (`*IfType`, `*PhysicalMediaType`, `*NdisDeviceType`) |
 | Câmera | `cv2.CAP_ANY` | `cv2.CAP_MSMF` |
 | Foto local | `/tmp/revy_photos` | `%TEMP%\revy_photos` |
-| Upload SMB | `mount -t cifs` + sudo | `WNetAddConnection2` + cópia para UNC (sem admin) |
-| Trava Alt+Tab | `gsettings` | hook `WH_KEYBOARD_LL` em thread própria |
+| Trava de atalhos | `gsettings` (Alt+Tab) | hook `WH_KEYBOARD_LL` em thread própria — bloqueia só Win e Alt+F4 |
 | Relógio NTP | `sudo date` | `SetSystemTime`, com fallback `w32tm /resync` |
 
 Só o serial usa PowerShell, e uma vez por execução — não existe no registro.
@@ -215,7 +213,6 @@ Credenciais hardcoded, já no histórico do git:
 
 - MySQL `10.3.0.12` / `drack` / senha — em `device_info.py`, `save_log.py`,
   `app_flow.py`, `database.py`, `cadastro.py`, `scripts/smoke_test.py`
-- SMB `172.16.48.33` / `marcos` / senha — em `camera.py`
 
 Empacotar em `.exe` piora o quadro: um bundle PyInstaller é trivialmente
 extraível (`pyi-archive_viewer`, que está no próprio `.venv` do projeto), e o

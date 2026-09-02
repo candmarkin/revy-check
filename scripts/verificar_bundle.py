@@ -36,7 +36,6 @@ COOKIE_LEN = struct.calcsize(COOKIE_FMT)
 TOC_ENTRY_FMT = "!iIIIBc"
 TOC_ENTRY_LEN = struct.calcsize(TOC_ENTRY_FMT)
 
-
 def segredos(caminho_env):
     """Valores nao vazios do revycheck.env. Sao eles que nao podem estar no exe."""
     valores = {}
@@ -51,6 +50,14 @@ def segredos(caminho_env):
         if valor:
             valores[chave.strip()] = valor.encode("utf-8")
     return valores
+
+
+# Chaves que podem (e devem) aparecer no binario por design, entao nao sao
+# segredo: a URL da API e' publica -- e' o default compilado em
+# `src/config.py` e agora embutida no boot via `revycheck_api_url_hook.py`.
+# Quando o `revycheck.env` local aponta para a mesma API embutida, o valor
+# "vaza" na comparacao sem ser um vazamento real.
+CHAVES_PUBLICAS = ("REVYCHECK_API_URL",)
 
 
 def entradas_carchive(bruto):
@@ -103,9 +110,10 @@ def main():
         return 1
 
     valores = segredos(ROOT / "revycheck.env")
+    for chave_publica in CHAVES_PUBLICAS:
+        valores.pop(chave_publica, None)
     if not valores:
         print("WARN  revycheck.env sem valores preenchidos: nada para comparar.")
-
     bruto = exe.read_bytes()
     try:
         entradas = list(entradas_carchive(bruto))

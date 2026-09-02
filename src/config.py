@@ -145,20 +145,6 @@ def api_timeout():
         return 15.0
 
 
-# --------------------------------------------------------------------- SMB
-
-
-def smb_config():
-    """Destino das fotos da câmera. Vazio desliga o envio."""
-    return {
-        "server": get("REVYCHECK_SMB_HOST", ""),
-        "share": get("REVYCHECK_SMB_SHARE", ""),
-        "username": get("REVYCHECK_SMB_USER", ""),
-        "password": get("REVYCHECK_SMB_PASSWORD", ""),
-        "remote_path": get("REVYCHECK_SMB_PATH", ""),
-    }
-
-
 # --------------------------------------------------------------------- DEV
 #
 # Nao ha' senha de DEV. Quem libera e' o `role` do usuario logado

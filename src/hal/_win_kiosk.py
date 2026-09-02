@@ -1,10 +1,14 @@
 """Trava de atalhos do Windows, equivalente ao `gsettings` do backend GNOME.
 
-Um hook `WH_KEYBOARD_LL` engole Win, Alt+Tab, Alt+Esc, Ctrl+Esc e Alt+F4 antes
-que o shell os veja. O hook roda numa thread propria com bomba de mensagens: LL
-hooks sao entregues na thread que os instalou, e a thread precisa estar
-processando mensagens -- pendurar isso no loop do pygame deixaria o hook mudo
-sempre que um passo bloqueasse esperando hardware.
+Um hook `WH_KEYBOARD_LL` engole Win e Alt+F4 antes que o shell os veja. O hook
+roda numa thread propria com bomba de mensagens: LL hooks sao entregues na
+thread que os instalou, e a thread precisa estar processando mensagens --
+pendurar isso no loop do pygame deixaria o hook mudo sempre que um passo
+bloqueasse esperando hardware.
+
+Alt+Tab e Alt/Ctrl+Esc NAO sao mais bloqueados: travar a troca de janela
+atrapalhava mais o tecnico do que impedia o desvio, e quem quer fechar a
+bancada de verdade usa o Shell Launcher.
 
 Ctrl+Alt+Del continua funcionando: o SO nao permite intercepta-lo, por design.
 Para fechar a maquina de verdade (substituir o shell) o caminho e' o Shell
@@ -24,12 +28,9 @@ WM_KEYDOWN = 0x0100
 WM_SYSKEYDOWN = 0x0104
 WM_QUIT = 0x0012
 
-VK_TAB = 0x09
-VK_ESCAPE = 0x1B
 VK_F4 = 0x73
 VK_LWIN = 0x5B
 VK_RWIN = 0x5C
-VK_CONTROL = 0x11
 
 LLKHF_ALTDOWN = 0x20
 
@@ -60,18 +61,10 @@ user32.CallNextHookEx.argtypes = [
 _state = {"thread": None, "thread_id": None, "hook": None}
 
 
-def _ctrl_down():
-    return bool(user32.GetAsyncKeyState(VK_CONTROL) & 0x8000)
-
-
 def _should_block(key, message):
     alt_down = bool(key.flags & LLKHF_ALTDOWN)
 
     if key.vkCode in (VK_LWIN, VK_RWIN):
-        return True
-    if key.vkCode == VK_TAB and alt_down:
-        return True
-    if key.vkCode == VK_ESCAPE and (alt_down or _ctrl_down()):
         return True
     if key.vkCode == VK_F4 and alt_down:
         return True

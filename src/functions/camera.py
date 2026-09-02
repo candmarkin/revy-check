@@ -5,30 +5,31 @@ from datetime import datetime
 import os
 from pathlib import Path
 
-from src import config, hal
+from src import hal
+from src import api_client
 from src.functions import dev_mode
 
+
 class CameraTest:
-    def __init__(self, screen, font, smb_config=None):
+    def __init__(self, screen, font):
         """
         Inicializa o teste de câmera
-        
+
         Args:
             screen: Surface do pygame para renderização
             font: Fonte do pygame para texto
-            smb_config: Dict com configurações SMB {'server', 'share', 'username', 'password', 'remote_path'}
         """
         self.screen = screen
         self.font = font
         self.width = screen.get_width()
         self.height = screen.get_height()
-        self.smb_config = smb_config or {}
-        
+
         self.camera = None
         self.running = False
         self.photo_taken = False
         self.photo_path = None
         self.upload_success = False
+
         
     def init_camera(self, camera_index=0):
         """Inicializa a câmera"""
@@ -108,34 +109,25 @@ class CameraTest:
         except Exception as e:
             return False, f"Erro ao salvar foto: {str(e)}"
     
-    def upload_to_smb(self):
-        """Envia a foto para o compartilhamento SMB.
-
-        O transporte fica no backend: `mount -t cifs` no Linux (com sudo),
-        sessao autenticada + copia para caminho UNC no Windows.
-        """
+    def upload_photo(self, device_serial=None):
+        """Sobe a foto para /revy-check/foto, autenticada pela sessão do técnico."""
         if not self.photo_path or not os.path.exists(self.photo_path):
             return False, "Nenhuma foto para enviar"
 
-        cfg = self.smb_config or config.smb_config()
-        if not all([cfg.get("server"), cfg.get("share"),
-                    cfg.get("username"), cfg.get("password")]):
-            return False, "SMB nao configurado (veja revycheck.env)"
-
-        ok, mensagem = hal.smb_upload(
-            self.photo_path,
-            cfg["server"], cfg["share"], cfg["username"], cfg["password"],
-            cfg.get("remote_path", ""),
-        )
+        try:
+            api_client.enviar_foto(device_serial or "", self.photo_path)
+        except api_client.NaoAutenticado as exc:
+            return False, str(exc)
+        except api_client.ApiError as exc:
+            return False, str(exc)
 
         # A foto e' do rosto do colaborador e a maquina vai para ele. Antes
         # ficava no diretorio temporario para sempre, mesmo depois do envio.
-        if ok:
-            try:
-                self.photo_path.unlink()
-            except OSError as exc:
-                print(f"Nao foi possivel apagar {self.photo_path}: {exc}")
-        return ok, mensagem
+        try:
+            self.photo_path.unlink()
+        except OSError as exc:
+            print(f"Nao foi possivel apagar {self.photo_path}: {exc}")
+        return True, "Foto enviada para a API"
 
     def draw_ui(self, surface, message="", color=(255, 255, 255)):
         """Desenha a interface com preview da câmera"""
@@ -242,7 +234,7 @@ class CameraTest:
                             surface = self.frame_to_surface(current_frame)
                             self.draw_ui(surface, message, message_color)
                             
-                            success, result = self.upload_to_smb()
+                            success, result = self.upload_photo(device_serial)
                             if success:
                                 message = result
                                 message_color = (0, 255, 0)
@@ -274,7 +266,7 @@ class CameraTest:
         return False, "Teste não concluído", None
 
 
-def camera_test_step(screen, font, device_serial=None, smb_config=None):
+def camera_test_step(screen, font, device_serial=None):
     """
     Função auxiliar para integrar com o sistema de testes
     
@@ -282,12 +274,11 @@ def camera_test_step(screen, font, device_serial=None, smb_config=None):
         screen: Surface do pygame
         font: Fonte do pygame
         device_serial: Serial do dispositivo para nomear arquivo
-        smb_config: Configuração do SMB (opcional)
     
     Returns:
         dict: {'success': bool, 'message': str, 'photo_path': str}
     """
-    camera = CameraTest(screen, font, smb_config)
+    camera = CameraTest(screen, font)
     success, message, photo_path = camera.run(device_serial)
     
     return {
@@ -302,9 +293,8 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
     font = pygame.font.SysFont("Arial", 24)
-    smb_config = {}
-    
-    result = camera_test_step(screen, font, device_serial="TEST123", smb_config=smb_config)
+
+    result = camera_test_step(screen, font, device_serial="TEST123")
     print(result)
-    
+
     pygame.quit()

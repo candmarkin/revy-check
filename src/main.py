@@ -1,5 +1,6 @@
 import sys
 import time
+import traceback
 from datetime import datetime
 from pathlib import Path
 
@@ -10,7 +11,7 @@ if __package__ in (None, ""):
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-from src import app_state, hal
+from src import app_state, config, hal
 from src.functions.app_flow import start_step, wait_for_db_connection
 from src.functions.audio import (
     headphone_connected,
@@ -36,6 +37,23 @@ from src.functions.touchpad import touchpad_step
 from src.functions.usb import port_has_device
 from src.functions.video_ports import draw_video, get_video_status, init_video_state
 from src.functions.wifi import WiFiTest
+
+
+def registrar_falha(etapa, exc):
+    """Grava o traceback ao lado do executavel, para a bancada nao ficar muda.
+
+    Em PROD a tela mostra so' "Chame o suporte": sem este arquivo, a unica
+    informacao que chega ao suporte e' "nao obteve os dados do equipamento".
+    Pasta somente-leitura nao pode derrubar o app, entao a falha ao gravar e'
+    engolida de proposito -- ja' estamos no caminho de erro.
+    """
+    try:
+        destino = Path(sys.executable).resolve().parent / "revycheck_erro.log"
+        with destino.open("a", encoding="utf-8") as f:
+            f.write(f"\n=== {datetime.now():%Y-%m-%d %H:%M:%S} | {etapa} | url={config.api_url()}\n")
+            f.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+    except OSError:
+        pass
 
 
 def init_app_state():
@@ -73,10 +91,21 @@ def main():
     tela_de_login()
     dev_mode.aplicar_pedido_de_cli()
 
+    # Antes da API: `get_system_info()` le' registro e psutil, nao depende de
+    # rede. Quando estava depois do `fetch_device_info`, qualquer falha da API
+    # deixava o overlay inteiro em "N/A" -- inclusive na tela de erro, que e'
+    # exatamente onde o suporte precisa do serial para saber de qual bancada
+    # veio a queixa.
+    app_state.SYSTEM_INFO = get_system_info()
+
     try:
         app_state.CONFIG = fetch_device_info()
     except Exception as exc:
         # Sem isso a falha virava traceback no console e tela preta na bancada.
+        # Em PROD a tela nao mostra o motivo ("Chame o suporte"), entao o
+        # traceback vai para arquivo -- senao a bancada reporta "nao obteve os
+        # dados" e nao sobra nada para diagnosticar.
+        registrar_falha("fetch_device_info", exc)
         detail = str(exc) if app_state.MODE == "DEV" else "Chame o suporte."
         ask_operator(
             ["Não foi possível identificar o equipamento.", detail],
@@ -86,8 +115,6 @@ def main():
         raise
 
     consulta_ntp()
-
-    app_state.SYSTEM_INFO = get_system_info()
 
     has_screen = app_state.CONFIG["HAS_EMBEDDED_SCREEN"]
     has_keyboard = app_state.CONFIG["HAS_EMBEDDED_KEYBOARD"]

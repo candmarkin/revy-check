@@ -559,37 +559,3 @@ def camera_backend():
     return cv2.CAP_ANY
 
 
-def smb_upload(local_path, server, share, username, password, remote_path=""):
-    """Monta o share com cifs, copia e desmonta. Precisa de sudo para `mount`."""
-    local_path = Path(local_path)
-    if not local_path.is_file():
-        return False, "Nenhuma foto para enviar"
-    if not all([server, share, username, password]):
-        return False, "Configuração SMB incompleta"
-
-    mount_point = Path("/tmp/smb_mount")
-    mount_point.mkdir(exist_ok=True)
-    subprocess.run(["sudo", "umount", str(mount_point)], stderr=subprocess.DEVNULL)
-
-    options = (
-        f"username={username},password={password},vers=3.0,"
-        f"uid={os.getuid()},gid={os.getgid()}"
-    )
-    result = subprocess.run(
-        ["sudo", "mount", "-t", "cifs", "-o", options, f"//{server}/{share}", str(mount_point)],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        return False, f"Erro ao montar SMB: {result.stderr.strip()}"
-
-    try:
-        remote_dir = mount_point / remote_path if remote_path else mount_point
-        remote_dir.mkdir(parents=True, exist_ok=True)
-        destination = remote_dir / local_path.name
-        shutil.copy2(local_path, destination)
-        return True, f"Foto enviada para //{server}/{share}/{remote_path}/{local_path.name}"
-    except OSError as exc:
-        return False, f"Erro ao enviar para SMB: {exc}"
-    finally:
-        subprocess.run(["sudo", "umount", str(mount_point)], stderr=subprocess.DEVNULL)

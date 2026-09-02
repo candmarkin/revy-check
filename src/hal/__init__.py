@@ -61,7 +61,6 @@ unlock_hotkeys = _impl.unlock_hotkeys
 set_system_time = _impl.set_system_time
 photos_dir = _impl.photos_dir
 camera_backend = _impl.camera_backend
-smb_upload = _impl.smb_upload
 
 
 def connected_video_ports():

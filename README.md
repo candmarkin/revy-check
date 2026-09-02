@@ -90,12 +90,12 @@ copy revycheck.env.example revycheck.env
 
 Nada aqui é obrigatório: sem arquivo nenhum o agente fala com a API de
 produção (`DEFAULT_API_URL`). O arquivo serve para apontar outra URL, ajustar
-timeout, habilitar o modo DEV e configurar o SMB das fotos.
+timeout e habilitar o modo DEV.
 
-O único segredo que ainda sobra na bancada é `REVYCHECK_SMB_*` — credencial de
-servidor de arquivos. Enquanto ela estiver no `revycheck.env`, o arquivo precisa
-de ACL; use conta de serviço com escrita só na pasta de fotos, nunca conta
-pessoal. Vazio desliga o envio, e o teste de câmera continua rodando.
+Não há segredo na bancada: as fotos da câmera também sobem pela API
+(`POST /revy-check/foto`, autenticada pelo técnico logado), e quem grava no
+share é a própria API, com a credencial de serviço dela — o agente não carrega
+credencial de arquivo.
 
 O modo DEV **não tem mais senha**: quem destrava é o papel do usuário logado
 (`role == "admin"`). Não há nada a configurar aqui.
@@ -110,6 +110,7 @@ Não fala. Toda persistência passa pela API Revy:
 | `POST /revy-check/buscamodelo` | início, para saber portas e recursos do modelo | `X-USER-KEY` |
 | `POST /revy-check/cadastrar` | quando o modelo ainda não existe no catálogo | `X-USER-KEY` |
 | `POST /revy-check/testefinal` | no fim, com o log do checklist | `X-USER-KEY` |
+| `POST /revy-check/foto` | no teste de câmera, para subir a foto | `X-USER-KEY` |
 
 As rotas vivem em `Revy/apps/api` (`functions/revycheck.py`, `functions/auth.py`
 e o `router_revycheck` no `main.py`). Depois de trocar a autenticação, a API
@@ -164,19 +165,9 @@ Variável de ambiente do processo vence qualquer arquivo. A pasta do executável
 é a **última** de propósito: pasta pública é gravável por muita gente, e um
 `revycheck.env` plantado ali apontaria o agente para outra API.
 
-**ACL só faz falta enquanto `REVYCHECK_SMB_*` estiver preenchido** — é o último
-segredo da bancada. Nesse caso use `CONFIG_SHARE` (opção 3) ou `ProgramData`
-(opção 2) com permissão de leitura restrita:
-
-```powershell
-icacls \\srv-arquivos\revycheck$\revycheck.env /inheritance:r ^
-  /grant:r "DOMINIO\Administradores:(F)" ^
-  /grant:r "DOMINIO\Tecnicos-Bancada:(R)"
-```
-
-Com o SMB vazio (ou depois que o upload da foto passar pela API), o
-`revycheck.env` só tem endereço e timeout: pode ficar na pasta pública ao lado
-do `.exe`, sem ACL, ou não existir.
+Sem segredo na bancada, o `revycheck.env` só tem endereço e timeout: pode
+ficar na pasta pública ao lado do `.exe`, sem ACL, ou não existir. A ordem
+acima continua servindo para apontar outra API por máquina ou por teste.
 
 O modo DEV é liberado por `role == "admin"` do usuário logado, e cada liberação
 entra no log do checklist com nome e papel — importa porque em DEV dá para

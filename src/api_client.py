@@ -10,8 +10,8 @@ distribuído acaba lido (`pyi-archive_viewer` extrai o bundle inteiro), então
 aquela chave era pública na prática, e rotacionar exigia rebuild e
 republicação em toda bancada.
 """
-
 import requests
+from pathlib import Path
 
 from src import config
 
@@ -156,6 +156,38 @@ def enviar_teste_final(device_serial, entries):
             for e in entries
         ],
     })
+
+
+def enviar_foto(device_serial, photo_path):
+    """Sobe a foto da câmera para /revy-check/foto, autenticada pelo técnico.
+
+    Multipart com o arquivo em `photo` e o serial em `device_serial`. A API
+    grava no share com a credencial dela — o agente não carrega SMB.
+    """
+    url = f"{config.api_url()}/foto"
+    if not _sessao["key"]:
+        raise NaoAutenticado("Sem login nesta sessão.")
+
+    try:
+        with open(photo_path, "rb") as arquivo:
+            resposta = requests.post(
+                url,
+                headers={"X-USER-KEY": _sessao["key"]},
+                data={"device_serial": device_serial},
+                files={"photo": (Path(photo_path).name, arquivo, "image/jpeg")},
+                timeout=config.api_timeout(),
+            )
+    except requests.RequestException as exc:
+        raise ApiError(f"Sem resposta de {url}: {type(exc).__name__}") from exc
+
+    if resposta.status_code == 401:
+        encerrar_sessao()
+        raise NaoAutenticado(_detalhe(resposta))
+    if resposta.status_code == 429:
+        raise LoginBloqueado(_detalhe(resposta))
+    if not resposta.ok:
+        raise ApiError(f"HTTP {resposta.status_code}: {_detalhe(resposta)}")
+    return resposta.json()
 
 
 def disponivel():
