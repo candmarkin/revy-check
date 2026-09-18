@@ -68,6 +68,8 @@ def draw_system_info(system_info):
         f"RAM: {system_info.get('ram', 'N/A')}",
         f"DISK: {system_info.get('disk', 'N/A')}",
         f"IP: {system_info.get('ip', 'N/A')}",
+        f"QUALIDADE GAT: {app_state.GAT_QUALITY or 'não informada'}"
+        + ("" if app_state.GAT_ALLOWS_REPROVE else " (trava ao reprovar)"),
     ]
 
     for line in lines:

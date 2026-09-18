@@ -87,7 +87,7 @@ sleep 2
 
 # Executar RevyCheck
 cd /home/$USER/Desktop/Git/revy-check
-python3 src/alltests.py
+python3 src/main.py
 
 # Após fechar o RevyCheck, desligar o X
 sleep 1
@@ -190,14 +190,8 @@ echo "   $ cd ~/Desktop/Git/revy-check"
 echo "   $ python3 src/functions/camera.py"
 echo ""
 echo "3. Configuração SMB para envio de fotos:"
-echo "   Edite o arquivo src/alltests.py e configure:"
-echo "   smb_config = {"
-echo "       'server': '192.168.1.100',"
-echo "       'share': 'fotos',"
-echo "       'username': 'usuario',"
-echo "       'password': 'senha',"
-echo "       'remote_path': 'cameras'"
-echo "   }"
+echo "   Edite o fallback em src/functions/camera.py, método upload_to_smb:"
+echo "       server, share, username, password, remote_path"
 echo ""
 echo "4. Reinicie o sistema para aplicar todas as configurações:"
 echo "   $ sudo reboot"

@@ -23,7 +23,8 @@ from src.functions.audio import (
 from src.functions.camera import camera_test_step
 from src.functions.device_info import fetch_device_info
 from src.functions.ethernet import ethernet_step
-from src.functions.gui import ask_operator, draw_text
+from src.functions.gat_quality import allows_reprove, fetch_quality
+from src.functions.gui import ask_operator, draw_text, reproved_lock_screen
 from src.functions.keyboard import keyboard_step
 from src.functions.ntp import consulta_ntp
 from src.functions.save_log import save_log
@@ -139,7 +140,17 @@ def main():
                 if event.key in pressed_keys:
                     pressed_keys.remove(event.key)
 
+        if app_state.REPROVED_STEP is not None:
+            state = "REPROVED_LOCK"
+
         if state == "START_STEP":
+            app_state.GAT_QUALITY = fetch_quality(app_state.SYSTEM_INFO.get("serial"))
+            app_state.GAT_ALLOWS_REPROVE = allows_reprove(app_state.GAT_QUALITY)
+            app_state.add_log({
+                "step": f"GAT_QUALITY_{app_state.GAT_QUALITY or 'DESCONHECIDA'}",
+                "time": app_state.now_iso(),
+                "result": "APROVADO",
+            })
             start_step()
             state = "SCREEN_STEP"
             continue
@@ -150,7 +161,7 @@ def main():
                 screen_step()
             state = "KEYBOARD_STEP"
 
-        if state == "KEYBOARD_STEP":
+        elif state == "KEYBOARD_STEP":
             if has_keyboard:
                 app_state.add_log({"step": "KEYBOARD_TEST_START", "time": str(datetime.now()), "result": "APROVADO"})
                 keyboard_step()
@@ -305,6 +316,20 @@ def main():
             pygame.display.flip()
             time.sleep(5)
             running = False
+
+        elif state == "REPROVED_LOCK":
+            if reproved_lock_screen():
+                # Recomeco limpo: video_aprovado e' global de modulo e fica
+                # grudado em True (video_ports.py:12-17), entao precisa de
+                # init_video_state; keyboard.py ja' limpa os proprios sets no
+                # inicio de keyboard_step (linhas 317-319).
+                app_state.LOG_DATA.clear()
+                app_state.REPROVED_STEP = None
+                init_video_state(video_ports)
+                step = 0
+                waiting_remove = False
+                pressed_keys.clear()
+                state = "START_STEP"
 
         # Apresenta o frame do loop principal. Sem isso, os estados que nao
         # desenham nada (equipamento sem tela/teclado/touchpad/wifi/camera)
